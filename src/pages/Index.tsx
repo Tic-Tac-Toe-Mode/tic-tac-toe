@@ -10,6 +10,11 @@ type Winner = Player | "draw";
 type Board = Player[];
 type GameMode = "2player" | "ai";
 
+interface PlayerNames {
+  X: string;
+  O: string;
+}
+
 const WINNING_COMBINATIONS = [
   [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
   [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
@@ -24,6 +29,9 @@ const Index = () => {
   const [winningLine, setWinningLine] = useState<number[]>([]);
   const [scores, setScores] = useState({ X: 0, O: 0, draws: 0 });
   const [isAiThinking, setIsAiThinking] = useState(false);
+  const [playerNames, setPlayerNames] = useState<PlayerNames>({ X: "Player 1", O: "Player 2" });
+  const [showNameInput, setShowNameInput] = useState(false);
+  const [tempNames, setTempNames] = useState({ X: "", O: "" });
 
   useEffect(() => {
     const savedScores = localStorage.getItem("tictactoe-scores");
@@ -131,7 +139,8 @@ const Index = () => {
       setScores(newScores);
       localStorage.setItem("tictactoe-scores", JSON.stringify(newScores));
       
-      toast.success(`${gameWinner} Wins! 🎉`);
+      const winnerName = gameMode === "2player" ? playerNames[gameWinner] : gameWinner;
+      toast.success(`${winnerName} Wins! 🎉`);
     } else if (newBoard.every(cell => cell !== null)) {
       setWinner("draw");
       const newScores = { ...scores, draws: scores.draws + 1 };
@@ -152,9 +161,81 @@ const Index = () => {
   };
 
   const selectMode = (mode: GameMode) => {
-    setGameMode(mode);
+    if (mode === "2player") {
+      setShowNameInput(true);
+      setTempNames({ X: "", O: "" });
+    } else {
+      setGameMode(mode);
+      resetGame();
+    }
+  };
+
+  const confirmNames = () => {
+    setPlayerNames({
+      X: tempNames.X.trim() || "Player 1",
+      O: tempNames.O.trim() || "Player 2"
+    });
+    setGameMode("2player");
+    setShowNameInput(false);
     resetGame();
   };
+
+  if (showNameInput) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
+        <Card className="w-full max-w-md p-8 space-y-6 shadow-2xl">
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-bold">Enter Player Names</h2>
+            <p className="text-muted-foreground">Customize your game experience</p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Player X Name</label>
+              <input
+                type="text"
+                value={tempNames.X}
+                onChange={(e) => setTempNames({ ...tempNames, X: e.target.value })}
+                placeholder="Enter name for X"
+                className="w-full px-4 py-2 rounded-lg border-2 border-primary/20 focus:border-primary outline-none bg-background"
+                maxLength={20}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Player O Name</label>
+              <input
+                type="text"
+                value={tempNames.O}
+                onChange={(e) => setTempNames({ ...tempNames, O: e.target.value })}
+                placeholder="Enter name for O"
+                className="w-full px-4 py-2 rounded-lg border-2 border-accent/20 focus:border-accent outline-none bg-background"
+                maxLength={20}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <Button
+              onClick={confirmNames}
+              size="lg"
+              className="w-full h-12 bg-gradient-to-r from-primary to-primary/90"
+            >
+              Start Game
+            </Button>
+            <Button
+              onClick={() => setShowNameInput(false)}
+              variant="outline"
+              size="lg"
+              className="w-full h-12"
+            >
+              Back
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   if (!gameMode) {
     return (
@@ -213,6 +294,19 @@ const Index = () => {
               </div>
             </div>
           </div>
+
+          <div className="pt-4 border-t space-y-3">
+            <Button
+              onClick={() => window.open("https://otieu.com/4/7658671", "_blank")}
+              variant="outline"
+              className="w-full"
+            >
+              Support Us 💝
+            </Button>
+            <p className="text-xs text-center text-muted-foreground">
+              Developer: Alameen Koko
+            </p>
+          </div>
         </Card>
       </div>
     );
@@ -243,6 +337,25 @@ const Index = () => {
                       {winner} Wins! 🎉
                     </p>
                   )}
+                </div>
+              ) : gameMode === "2player" ? (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+                      isXTurn ? "bg-primary text-primary-foreground animate-pulse-glow" : "bg-muted text-muted-foreground"
+                    }`}>
+                      {playerNames.X}
+                    </div>
+                    <span className="text-muted-foreground">vs</span>
+                    <div className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+                      !isXTurn ? "bg-accent text-accent-foreground animate-pulse-glow" : "bg-muted text-muted-foreground"
+                    }`}>
+                      {playerNames.O}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {isXTurn ? `${playerNames.X}'s turn` : `${playerNames.O}'s turn`}
+                  </p>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
@@ -307,9 +420,21 @@ const Index = () => {
           </div>
         </Card>
 
-        <p className="text-center text-sm text-muted-foreground">
-          {gameMode === "ai" ? "Playing against unbeatable AI" : "Local 2-player mode"}
-        </p>
+        <div className="space-y-3">
+          <Button
+            onClick={() => window.open("https://otieu.com/4/7658671", "_blank")}
+            variant="outline"
+            className="w-full"
+          >
+            Support Us 💝
+          </Button>
+          <p className="text-center text-sm text-muted-foreground">
+            {gameMode === "ai" ? "Playing against unbeatable AI" : "Local 2-player mode"}
+          </p>
+          <p className="text-center text-xs text-muted-foreground">
+            Developer: Alameen Koko
+          </p>
+        </div>
       </div>
     </div>
   );
