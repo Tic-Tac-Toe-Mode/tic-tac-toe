@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Gamepad2, RotateCcw, User, Users, Trophy, BarChart3, X } from "lucide-react";
+import { Gamepad2, RotateCcw, User, Users, Trophy, BarChart3, X, Crown } from "lucide-react";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { VolumeControl } from "@/components/VolumeControl";
+import { Leaderboard, LeaderboardEntry } from "@/components/Leaderboard";
 import logo from "@/assets/logo.jpg";
 
 type Player = "X" | "O" | null;
@@ -46,6 +47,8 @@ const Index = () => {
   const [showNameInput, setShowNameInput] = useState(false);
   const [tempNames, setTempNames] = useState({ X: "", O: "" });
   const [showStats, setShowStats] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [statistics, setStatistics] = useState<Statistics>({
     totalGames: 0,
     xWins: 0,
@@ -66,6 +69,10 @@ const Index = () => {
     const savedStats = localStorage.getItem("tictactoe-stats");
     if (savedStats) {
       setStatistics(JSON.parse(savedStats));
+    }
+    const savedLeaderboard = localStorage.getItem("tictactoe-leaderboard");
+    if (savedLeaderboard) {
+      setLeaderboard(JSON.parse(savedLeaderboard));
     }
     
     // Auto-dismiss splash after 2.5 seconds
@@ -150,6 +157,38 @@ const Index = () => {
     }
   };
 
+  const updateLeaderboard = (playerName: string, won: boolean) => {
+    const existingIndex = leaderboard.findIndex(e => e.name.toLowerCase() === playerName.toLowerCase());
+    let newLeaderboard = [...leaderboard];
+    
+    if (existingIndex >= 0) {
+      newLeaderboard[existingIndex] = {
+        ...newLeaderboard[existingIndex],
+        wins: newLeaderboard[existingIndex].wins + (won ? 1 : 0),
+        points: newLeaderboard[existingIndex].points + (won ? 10 : 5),
+        gamesPlayed: newLeaderboard[existingIndex].gamesPlayed + 1,
+        lastPlayed: new Date().toISOString(),
+      };
+    } else {
+      newLeaderboard.push({
+        name: playerName,
+        wins: won ? 1 : 0,
+        points: won ? 10 : 5,
+        gamesPlayed: 1,
+        lastPlayed: new Date().toISOString(),
+      });
+    }
+    
+    setLeaderboard(newLeaderboard);
+    localStorage.setItem("tictactoe-leaderboard", JSON.stringify(newLeaderboard));
+  };
+
+  const clearLeaderboard = () => {
+    setLeaderboard([]);
+    localStorage.removeItem("tictactoe-leaderboard");
+    toast.success("Leaderboard cleared!");
+  };
+
   const updateStatistics = (gameWinner: Winner) => {
     const newStats = { ...statistics };
     newStats.totalGames += 1;
@@ -161,14 +200,26 @@ const Index = () => {
         newStats.bestStreak = newStats.winStreak;
       }
       setSessionPoints(prev => ({ ...prev, X: prev.X + 10 }));
+      if (gameMode === "2player") {
+        updateLeaderboard(playerNames.X, true);
+        updateLeaderboard(playerNames.O, false);
+      }
     } else if (gameWinner === "O") {
       newStats.oWins += 1;
       newStats.winStreak = 0;
       setSessionPoints(prev => ({ ...prev, O: prev.O + 10 }));
+      if (gameMode === "2player") {
+        updateLeaderboard(playerNames.O, true);
+        updateLeaderboard(playerNames.X, false);
+      }
     } else {
       newStats.draws += 1;
       newStats.winStreak = 0;
       setSessionPoints(prev => ({ X: prev.X + 5, O: prev.O + 5 }));
+      if (gameMode === "2player") {
+        updateLeaderboard(playerNames.X, false);
+        updateLeaderboard(playerNames.O, false);
+      }
     }
     
     setStatistics(newStats);
@@ -282,6 +333,17 @@ const Index = () => {
           <p className="mt-2 text-white/80">Loading...</p>
         </div>
       </div>
+    );
+  }
+
+  // Leaderboard
+  if (showLeaderboard) {
+    return (
+      <Leaderboard 
+        entries={leaderboard} 
+        onClose={() => setShowLeaderboard(false)} 
+        onClear={clearLeaderboard}
+      />
     );
   }
 
@@ -450,15 +512,26 @@ const Index = () => {
                 <Trophy className="h-4 w-4 text-primary" />
                 <span className="font-semibold">Scores</span>
               </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setShowStats(true)}
-                className="gap-1"
-              >
-                <BarChart3 className="h-4 w-4" />
-                Stats
-              </Button>
+              <div className="flex gap-1">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setShowLeaderboard(true)}
+                  className="gap-1"
+                >
+                  <Crown className="h-4 w-4 text-yellow-500" />
+                  Top
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setShowStats(true)}
+                  className="gap-1"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  Stats
+                </Button>
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-2 mt-3">
               <div className="text-center p-2 bg-primary/10 rounded-lg">
@@ -619,10 +692,16 @@ const Index = () => {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <VolumeControl volume={volume} setVolume={setVolume} isMuted={isMuted} setIsMuted={setIsMuted} />
-            <Button variant="ghost" size="sm" onClick={() => setShowStats(true)}>
-              <BarChart3 className="h-4 w-4 mr-1" />
-              Stats
-            </Button>
+            <div className="flex gap-1">
+              <Button variant="ghost" size="sm" onClick={() => setShowLeaderboard(true)}>
+                <Crown className="h-4 w-4 mr-1 text-yellow-500" />
+                Top
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowStats(true)}>
+                <BarChart3 className="h-4 w-4 mr-1" />
+                Stats
+              </Button>
+            </div>
           </div>
           <Button
             onClick={() => window.open("https://otieu.com/4/7658671", "_blank")}
