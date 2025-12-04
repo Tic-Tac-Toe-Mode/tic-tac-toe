@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Gamepad2, RotateCcw, User, Users, Trophy } from "lucide-react";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
+import { useSoundEffects } from "@/hooks/useSoundEffects";
+import { VolumeControl } from "@/components/VolumeControl";
 
 type Player = "X" | "O" | null;
 type Winner = Player | "draw";
@@ -32,6 +34,8 @@ const Index = () => {
   const [playerNames, setPlayerNames] = useState<PlayerNames>({ X: "Player 1", O: "Player 2" });
   const [showNameInput, setShowNameInput] = useState(false);
   const [tempNames, setTempNames] = useState({ X: "", O: "" });
+  
+  const { volume, setVolume, isMuted, setIsMuted, playMoveSound, playWinSound, playDrawSound } = useSoundEffects();
 
   useEffect(() => {
     const savedScores = localStorage.getItem("tictactoe-scores");
@@ -118,8 +122,11 @@ const Index = () => {
   const handleCellClick = (index: number) => {
     if (board[index] || winner || isAiThinking) return;
 
+    const currentPlayer = isXTurn ? "X" : "O";
+    playMoveSound(isXTurn);
+    
     const newBoard = [...board];
-    newBoard[index] = isXTurn ? "X" : "O";
+    newBoard[index] = currentPlayer;
     setBoard(newBoard);
 
     const { winner: gameWinner, line } = checkWinner(newBoard);
@@ -127,6 +134,7 @@ const Index = () => {
     if (gameWinner) {
       setWinner(gameWinner);
       setWinningLine(line);
+      playWinSound();
       
       confetti({
         particleCount: 100,
@@ -143,6 +151,7 @@ const Index = () => {
       toast.success(`${winnerName} Wins! 🎉`);
     } else if (newBoard.every(cell => cell !== null)) {
       setWinner("draw");
+      playDrawSound();
       const newScores = { ...scores, draws: scores.draws + 1 };
       setScores(newScores);
       localStorage.setItem("tictactoe-scores", JSON.stringify(newScores));
@@ -296,6 +305,9 @@ const Index = () => {
           </div>
 
           <div className="pt-4 border-t space-y-3">
+            <div className="flex items-center justify-center">
+              <VolumeControl volume={volume} setVolume={setVolume} isMuted={isMuted} setIsMuted={setIsMuted} />
+            </div>
             <Button
               onClick={() => window.open("https://otieu.com/4/7658671", "_blank")}
               variant="outline"
@@ -421,6 +433,9 @@ const Index = () => {
         </Card>
 
         <div className="space-y-3">
+          <div className="flex items-center justify-center">
+            <VolumeControl volume={volume} setVolume={setVolume} isMuted={isMuted} setIsMuted={setIsMuted} />
+          </div>
           <Button
             onClick={() => window.open("https://otieu.com/4/7658671", "_blank")}
             variant="outline"
