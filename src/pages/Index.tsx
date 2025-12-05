@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Gamepad2, RotateCcw, User, Users, Trophy, BarChart3, X, Crown } from "lucide-react";
+import { Gamepad2, RotateCcw, User, Users, Trophy, BarChart3, X, Crown, LogOut } from "lucide-react";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { VolumeControl } from "@/components/VolumeControl";
 import { Leaderboard, LeaderboardEntry } from "@/components/Leaderboard";
 import logo from "@/assets/logo.jpg";
+import { App } from "@capacitor/app";
 
 type Player = "X" | "O" | null;
 type Winner = Player | "draw";
@@ -642,6 +643,14 @@ const Index = () => {
               className="w-full"
             >
               Support Us 💝
+            </Button>
+            <Button
+              onClick={() => App.exitApp()}
+              variant="destructive"
+              className="w-full"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Exit Game
             </Button>
             <p className="text-xs text-center text-muted-foreground">
               Developer: Alameen Koko
