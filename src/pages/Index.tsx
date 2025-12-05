@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Gamepad2, RotateCcw, User, Users, Trophy, BarChart3, X, Crown, LogOut } from "lucide-react";
+import { Gamepad2, RotateCcw, User, Users, Trophy, BarChart3, X, Crown, LogOut, History } from "lucide-react";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { VolumeControl } from "@/components/VolumeControl";
 import { Leaderboard, LeaderboardEntry } from "@/components/Leaderboard";
+import { GameHistory, GameRecord } from "@/components/GameHistory";
 import logo from "@/assets/logo.jpg";
 import { App } from "@capacitor/app";
 import {
@@ -73,6 +74,9 @@ const Index = () => {
   });
   const [sessionPoints, setSessionPoints] = useState({ X: 0, O: 0 });
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [gameHistory, setGameHistory] = useState<GameRecord[]>([]);
+  const [moveCount, setMoveCount] = useState(0);
   
   const { volume, setVolume, isMuted, setIsMuted, playMoveSound, playWinSound, playDrawSound } = useSoundEffects();
 
@@ -88,6 +92,10 @@ const Index = () => {
     const savedLeaderboard = localStorage.getItem("tictactoe-leaderboard");
     if (savedLeaderboard) {
       setLeaderboard(JSON.parse(savedLeaderboard));
+    }
+    const savedHistory = localStorage.getItem("tictactoe-history");
+    if (savedHistory) {
+      setGameHistory(JSON.parse(savedHistory));
     }
     
     // Auto-dismiss splash after 2.5 seconds
@@ -223,7 +231,32 @@ const Index = () => {
     toast.success("Leaderboard cleared!");
   };
 
-  const updateStatistics = (gameWinner: Winner) => {
+  const addGameToHistory = (gameWinner: Winner, totalMoves: number) => {
+    if (!gameMode || gameWinner === null) return;
+    
+    const record: GameRecord = {
+      id: Date.now().toString(),
+      mode: gameMode,
+      aiDifficulty: gameMode === "ai" ? aiDifficulty : undefined,
+      playerX: gameMode === "2player" ? playerNames.X : "You",
+      playerO: gameMode === "ai" ? `AI (${aiDifficulty})` : playerNames.O,
+      winner: gameWinner as "X" | "O" | "draw",
+      date: new Date().toISOString(),
+      moves: totalMoves,
+    };
+    
+    const newHistory = [...gameHistory, record].slice(-50); // Keep last 50 games
+    setGameHistory(newHistory);
+    localStorage.setItem("tictactoe-history", JSON.stringify(newHistory));
+  };
+
+  const clearHistory = () => {
+    setGameHistory([]);
+    localStorage.removeItem("tictactoe-history");
+    toast.success("History cleared!");
+  };
+
+  const updateStatistics = (gameWinner: Winner, totalMoves: number) => {
     const newStats = { ...statistics };
     newStats.totalGames += 1;
     
@@ -258,6 +291,7 @@ const Index = () => {
     
     setStatistics(newStats);
     localStorage.setItem("tictactoe-stats", JSON.stringify(newStats));
+    addGameToHistory(gameWinner, totalMoves);
   };
 
   const handleCellClick = (index: number) => {
@@ -269,6 +303,8 @@ const Index = () => {
     const newBoard = [...board];
     newBoard[index] = currentPlayer;
     setBoard(newBoard);
+    const newMoveCount = moveCount + 1;
+    setMoveCount(newMoveCount);
 
     const { winner: gameWinner, line } = checkWinner(newBoard);
     
@@ -276,7 +312,7 @@ const Index = () => {
       setWinner(gameWinner);
       setWinningLine(line);
       playWinSound();
-      updateStatistics(gameWinner);
+      updateStatistics(gameWinner, newMoveCount);
       
       confetti({
         particleCount: 100,
@@ -294,7 +330,7 @@ const Index = () => {
     } else if (newBoard.every(cell => cell !== null)) {
       setWinner("draw");
       playDrawSound();
-      updateStatistics("draw");
+      updateStatistics("draw", newMoveCount);
       const newScores = { ...scores, draws: scores.draws + 1 };
       setScores(newScores);
       localStorage.setItem("tictactoe-scores", JSON.stringify(newScores));
@@ -310,6 +346,7 @@ const Index = () => {
     setWinner(null);
     setWinningLine([]);
     setIsAiThinking(false);
+    setMoveCount(0);
   };
 
   const selectMode = (mode: GameMode) => {
@@ -383,6 +420,17 @@ const Index = () => {
         entries={leaderboard} 
         onClose={() => setShowLeaderboard(false)} 
         onClear={clearLeaderboard}
+      />
+    );
+  }
+
+  // Game History
+  if (showHistory) {
+    return (
+      <GameHistory 
+        records={gameHistory} 
+        onClose={() => setShowHistory(false)} 
+        onClear={clearHistory}
       />
     );
   }
@@ -626,6 +674,15 @@ const Index = () => {
                   <BarChart3 className="h-4 w-4" />
                   Stats
                 </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setShowHistory(true)}
+                  className="gap-1"
+                >
+                  <History className="h-4 w-4" />
+                  History
+                </Button>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-2 mt-3">
@@ -820,6 +877,10 @@ const Index = () => {
               <Button variant="ghost" size="sm" onClick={() => setShowStats(true)}>
                 <BarChart3 className="h-4 w-4 mr-1" />
                 Stats
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowHistory(true)}>
+                <History className="h-4 w-4 mr-1" />
+                History
               </Button>
             </div>
           </div>
