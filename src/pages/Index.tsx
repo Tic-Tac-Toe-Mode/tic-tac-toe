@@ -10,6 +10,7 @@ import { Leaderboard, LeaderboardEntry } from "@/components/Leaderboard";
 import { GameHistory, GameRecord } from "@/components/GameHistory";
 import logo from "@/assets/logo.jpg";
 import { App } from "@capacitor/app";
+import { Haptics, ImpactStyle, NotificationType } from "@capacitor/haptics";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +21,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+const triggerHaptic = async (type: "move" | "win" | "draw") => {
+  try {
+    if (type === "move") {
+      await Haptics.impact({ style: ImpactStyle.Light });
+    } else if (type === "win") {
+      await Haptics.notification({ type: NotificationType.Success });
+    } else {
+      await Haptics.notification({ type: NotificationType.Warning });
+    }
+  } catch {
+    // Haptics not available (web/unsupported device)
+  }
+};
 
 type Player = "X" | "O" | null;
 type Winner = Player | "draw";
@@ -299,6 +314,7 @@ const Index = () => {
 
     const currentPlayer = isXTurn ? "X" : "O";
     playMoveSound(isXTurn);
+    triggerHaptic("move");
     
     const newBoard = [...board];
     newBoard[index] = currentPlayer;
@@ -312,6 +328,7 @@ const Index = () => {
       setWinner(gameWinner);
       setWinningLine(line);
       playWinSound();
+      triggerHaptic("win");
       updateStatistics(gameWinner, newMoveCount);
       
       confetti({
@@ -330,6 +347,7 @@ const Index = () => {
     } else if (newBoard.every(cell => cell !== null)) {
       setWinner("draw");
       playDrawSound();
+      triggerHaptic("draw");
       updateStatistics("draw", newMoveCount);
       const newScores = { ...scores, draws: scores.draws + 1 };
       setScores(newScores);
