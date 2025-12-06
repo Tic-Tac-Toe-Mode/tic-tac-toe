@@ -651,28 +651,28 @@ const Index = () => {
 
   if (!gameMode) {
     return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-primary/5 p-4">
-        {/* Top Exit Button */}
-        <div className="w-full max-w-md mx-auto flex justify-end mb-2">
-          <button
-            onClick={() => setShowExitConfirm(true)}
-            className="group relative flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-bold rounded-xl shadow-lg hover:shadow-red-500/30 transition-all duration-300 transform hover:scale-105 active:scale-95"
-          >
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-xl" />
-            <LogOut className="h-4 w-4 relative z-10" />
-            <span className="relative z-10 text-sm">EXIT</span>
-          </button>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
+        <Card className="w-full max-w-md p-8 space-y-6 shadow-2xl">
+          {/* Exit Button - Inside Card */}
+          <div className="flex justify-end -mt-2 -mr-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowExitConfirm(true)}
+              className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border border-destructive/20 hover:border-destructive/40 transition-all"
+            >
+              <LogOut className="h-4 w-4" />
+              Exit
+            </Button>
+          </div>
 
-        <div className="flex-1 flex items-center justify-center">
-          <Card className="w-full max-w-md p-8 space-y-6 shadow-2xl">
-            <div className="text-center space-y-2">
-              <img src={logo} alt="Tic-Tac-Toe" className="w-24 h-24 mx-auto rounded-xl shadow-lg" />
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Tic-Tac-Toe
-              </h1>
-              <p className="text-muted-foreground">Choose your game mode</p>
-            </div>
+          <div className="text-center space-y-2 -mt-2">
+            <img src={logo} alt="Tic-Tac-Toe" className="w-24 h-24 mx-auto rounded-xl shadow-lg" />
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Tic-Tac-Toe
+            </h1>
+            <p className="text-muted-foreground">Choose your game mode</p>
+          </div>
 
             <div className="space-y-3">
               <Button
@@ -772,8 +772,7 @@ const Index = () => {
                 Developer: Alameen Koko
               </p>
             </div>
-          </Card>
-        </div>
+        </Card>
 
         <AlertDialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
           <AlertDialogContent>
