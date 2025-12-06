@@ -636,130 +636,137 @@ const Index = () => {
 
   if (!gameMode) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
-        <Card className="w-full max-w-md p-8 space-y-6 shadow-2xl">
-          <div className="text-center space-y-2">
-            <img src={logo} alt="Tic-Tac-Toe" className="w-24 h-24 mx-auto rounded-xl shadow-lg" />
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Tic-Tac-Toe
-            </h1>
-            <p className="text-muted-foreground">Choose your game mode</p>
-          </div>
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-primary/5 p-4">
+        {/* Top Exit Button */}
+        <div className="w-full max-w-md mx-auto flex justify-end mb-2">
+          <button
+            onClick={() => setShowExitConfirm(true)}
+            className="group relative flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-bold rounded-xl shadow-lg hover:shadow-red-500/30 transition-all duration-300 transform hover:scale-105 active:scale-95"
+          >
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-xl" />
+            <LogOut className="h-4 w-4 relative z-10" />
+            <span className="relative z-10 text-sm">EXIT</span>
+          </button>
+        </div>
 
-          <div className="space-y-3">
-            <Button
-              onClick={() => selectMode("2player")}
-              size="lg"
-              className="w-full h-16 text-lg bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-[var(--shadow-glow)] hover:shadow-[var(--shadow-glow)] transition-all"
-            >
-              <Users className="mr-2 h-5 w-5" />
-              2 Players
-            </Button>
-            
-            <Button
-              onClick={() => selectMode("ai")}
-              size="lg"
-              variant="outline"
-              className="w-full h-16 text-lg border-2 hover:border-accent hover:bg-accent/10"
-            >
-              <User className="mr-2 h-5 w-5" />
-              vs AI
-            </Button>
-          </div>
+        <div className="flex-1 flex items-center justify-center">
+          <Card className="w-full max-w-md p-8 space-y-6 shadow-2xl">
+            <div className="text-center space-y-2">
+              <img src={logo} alt="Tic-Tac-Toe" className="w-24 h-24 mx-auto rounded-xl shadow-lg" />
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                Tic-Tac-Toe
+              </h1>
+              <p className="text-muted-foreground">Choose your game mode</p>
+            </div>
 
-          <div className="pt-4 border-t">
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2">
-                <Trophy className="h-4 w-4 text-primary" />
-                <span className="font-semibold">Scores</span>
+            <div className="space-y-3">
+              <Button
+                onClick={() => selectMode("2player")}
+                size="lg"
+                className="w-full h-16 text-lg bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-[var(--shadow-glow)] hover:shadow-[var(--shadow-glow)] transition-all"
+              >
+                <Users className="mr-2 h-5 w-5" />
+                2 Players
+              </Button>
+              
+              <Button
+                onClick={() => selectMode("ai")}
+                size="lg"
+                variant="outline"
+                className="w-full h-16 text-lg border-2 hover:border-accent hover:bg-accent/10"
+              >
+                <User className="mr-2 h-5 w-5" />
+                vs AI
+              </Button>
+            </div>
+
+            <div className="pt-4 border-t">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <Trophy className="h-4 w-4 text-primary" />
+                  <span className="font-semibold">Scores</span>
+                </div>
+                <div className="flex gap-1">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setShowLeaderboard(true)}
+                    className="gap-1"
+                  >
+                    <Crown className="h-4 w-4 text-yellow-500" />
+                    Top
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setShowStats(true)}
+                    className="gap-1"
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                    Stats
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setShowHistory(true)}
+                    className="gap-1"
+                  >
+                    <History className="h-4 w-4" />
+                    History
+                  </Button>
+                </div>
               </div>
-              <div className="flex gap-1">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setShowLeaderboard(true)}
-                  className="gap-1"
-                >
-                  <Crown className="h-4 w-4 text-yellow-500" />
-                  Top
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setShowStats(true)}
-                  className="gap-1"
-                >
-                  <BarChart3 className="h-4 w-4" />
-                  Stats
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setShowHistory(true)}
-                  className="gap-1"
-                >
-                  <History className="h-4 w-4" />
-                  History
-                </Button>
+              <div className="grid grid-cols-3 gap-2 mt-3">
+                <div className="text-center p-2 bg-primary/10 rounded-lg">
+                  <div className="text-xl font-bold text-primary">{scores.X}</div>
+                  <div className="text-xs text-muted-foreground">X Wins</div>
+                </div>
+                <div className="text-center p-2 bg-muted rounded-lg">
+                  <div className="text-xl font-bold">{scores.draws}</div>
+                  <div className="text-xs text-muted-foreground">Draws</div>
+                </div>
+                <div className="text-center p-2 bg-accent/10 rounded-lg">
+                  <div className="text-xl font-bold text-accent">{scores.O}</div>
+                  <div className="text-xs text-muted-foreground">O Wins</div>
+                </div>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-2 mt-3">
-              <div className="text-center p-2 bg-primary/10 rounded-lg">
-                <div className="text-xl font-bold text-primary">{scores.X}</div>
-                <div className="text-xs text-muted-foreground">X Wins</div>
-              </div>
-              <div className="text-center p-2 bg-muted rounded-lg">
-                <div className="text-xl font-bold">{scores.draws}</div>
-                <div className="text-xs text-muted-foreground">Draws</div>
-              </div>
-              <div className="text-center p-2 bg-accent/10 rounded-lg">
-                <div className="text-xl font-bold text-accent">{scores.O}</div>
-                <div className="text-xs text-muted-foreground">O Wins</div>
-              </div>
-            </div>
-          </div>
 
-          <div className="pt-4 border-t space-y-3">
-            <div className="flex items-center justify-center">
-              <VolumeControl volume={volume} setVolume={setVolume} isMuted={isMuted} setIsMuted={setIsMuted} />
-            </div>
-            <Button
-              onClick={() => window.open("https://otieu.com/4/7658671", "_blank")}
-              variant="outline"
-              className="w-full"
-            >
-              Support Us 💝
-            </Button>
-            <Button
-              onClick={() => setShowExitConfirm(true)}
-              variant="destructive"
-              className="w-full"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Exit Game
-            </Button>
+            <div className="pt-4 border-t space-y-3">
+              <div className="flex items-center justify-center">
+                <VolumeControl volume={volume} setVolume={setVolume} isMuted={isMuted} setIsMuted={setIsMuted} />
+              </div>
+              <Button
+                onClick={() => window.open("https://otieu.com/4/7658671", "_blank")}
+                variant="outline"
+                className="w-full"
+              >
+                Support Us 💝
+              </Button>
 
-            <AlertDialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Exit Game?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to exit the game? Your current session progress will be saved.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => App.exitApp()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                    Exit
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-            <p className="text-xs text-center text-muted-foreground">
-              Developer: Alameen Koko
-            </p>
-          </div>
-        </Card>
+              <p className="text-xs text-center text-muted-foreground">
+                Developer: Alameen Koko
+              </p>
+            </div>
+          </Card>
+        </div>
+
+        <AlertDialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Exit Game?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to exit the game? Your current session progress will be saved.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => App.exitApp()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Exit
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     );
   }
