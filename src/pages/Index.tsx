@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Gamepad2, RotateCcw, User, Users, Trophy, BarChart3, X, Crown, LogOut, History, Palette } from "lucide-react";
+import { Gamepad2, RotateCcw, User, Users, Trophy, BarChart3, X, Crown, LogOut, History, Palette, Globe } from "lucide-react";
+import { OnlineMultiplayer } from "@/components/OnlineMultiplayer";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
@@ -40,7 +41,7 @@ const triggerHaptic = async (type: "move" | "win" | "draw") => {
 type Player = "X" | "O" | null;
 type Winner = Player | "draw";
 type Board = Player[];
-type GameMode = "2player" | "ai";
+type GameMode = "2player" | "ai" | "online";
 type AIDifficulty = "easy" | "medium" | "hard";
 
 interface PlayerNames {
@@ -376,8 +377,10 @@ const Index = () => {
     if (mode === "2player") {
       setShowNameInput(true);
       setTempNames({ X: "", O: "" });
-    } else {
+    } else if (mode === "ai") {
       setShowDifficultySelect(true);
+    } else if (mode === "online") {
+      setGameMode("online");
     }
   };
 
@@ -455,6 +458,13 @@ const Index = () => {
         onClose={() => setShowHistory(false)} 
         onClear={clearHistory}
       />
+    );
+  }
+
+  // Online Multiplayer Mode
+  if (gameMode === "online") {
+    return (
+      <OnlineMultiplayer onBack={() => setGameMode(null)} />
     );
   }
 
@@ -692,6 +702,16 @@ const Index = () => {
               >
                 <User className="mr-2 h-5 w-5" />
                 vs AI
+              </Button>
+
+              <Button
+                onClick={() => selectMode("online")}
+                size="lg"
+                variant="outline"
+                className="w-full h-16 text-lg border-2 border-green-500/30 hover:border-green-500 hover:bg-green-500/10"
+              >
+                <Globe className="mr-2 h-5 w-5 text-green-500" />
+                Online Multiplayer
               </Button>
             </div>
 

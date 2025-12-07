@@ -1,0 +1,382 @@
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { useOnlineGame, OnlineGame } from '@/hooks/useOnlineGame';
+import { ArrowLeft, Users, Plus, RefreshCw, Wifi, WifiOff, Loader2, RotateCcw, Trophy } from 'lucide-react';
+import confetti from 'canvas-confetti';
+import { toast } from 'sonner';
+import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
+import { useSoundEffects } from '@/hooks/useSoundEffects';
+
+interface OnlineMultiplayerProps {
+  onBack: () => void;
+}
+
+const triggerHaptic = async (type: "move" | "win" | "draw") => {
+  try {
+    if (type === "move") {
+      await Haptics.impact({ style: ImpactStyle.Light });
+    } else if (type === "win") {
+      await Haptics.notification({ type: NotificationType.Success });
+    } else {
+      await Haptics.notification({ type: NotificationType.Warning });
+    }
+  } catch {
+    // Haptics not available
+  }
+};
+
+const WINNING_COMBINATIONS = [
+  [0, 1, 2], [3, 4, 5], [6, 7, 8],
+  [0, 3, 6], [1, 4, 7], [2, 5, 8],
+  [0, 4, 8], [2, 4, 6],
+];
+
+export const OnlineMultiplayer = ({ onBack }: OnlineMultiplayerProps) => {
+  const {
+    playerName,
+    savePlayerName,
+    currentGame,
+    availableGames,
+    isLoading,
+    isSearching,
+    getMyRole,
+    isMyTurn,
+    createGame,
+    joinGame,
+    makeMove,
+    leaveGame,
+    fetchAvailableGames
+  } = useOnlineGame();
+
+  const [tempName, setTempName] = useState(playerName);
+  const [showNameInput, setShowNameInput] = useState(!playerName);
+  const { playMoveSound, playWinSound, playDrawSound } = useSoundEffects();
+
+  const handleCreateGame = async () => {
+    await createGame();
+  };
+
+  const handleJoinGame = async (gameId: string) => {
+    await joinGame(gameId);
+  };
+
+  const handleCellClick = async (index: number) => {
+    if (!currentGame || !isMyTurn()) return;
+    if (currentGame.board[index] !== null) return;
+
+    const myRole = getMyRole();
+    playMoveSound(myRole === 'X');
+    triggerHaptic('move');
+
+    const success = await makeMove(index);
+    
+    if (success && currentGame) {
+      const newBoard = [...currentGame.board];
+      newBoard[index] = myRole;
+      
+      // Check for winner locally for immediate feedback
+      for (const [a, b, c] of WINNING_COMBINATIONS) {
+        if (newBoard[a] && newBoard[a] === newBoard[b] && newBoard[a] === newBoard[c]) {
+          if (newBoard[a] === myRole) {
+            playWinSound();
+            triggerHaptic('win');
+            confetti({
+              particleCount: 100,
+              spread: 70,
+              origin: { y: 0.6 },
+              colors: myRole === 'X' ? ['#06b6d4', '#0ea5e9'] : ['#a855f7', '#c084fc'],
+            });
+          }
+          return;
+        }
+      }
+      
+      if (newBoard.every(cell => cell !== null)) {
+        playDrawSound();
+        triggerHaptic('draw');
+      }
+    }
+  };
+
+  const handleLeaveGame = async () => {
+    await leaveGame();
+  };
+
+  const handleBack = () => {
+    if (currentGame) {
+      handleLeaveGame();
+    }
+    onBack();
+  };
+
+  const getWinningLine = () => {
+    if (!currentGame?.winner || currentGame.winner === 'draw') return [];
+    for (const combo of WINNING_COMBINATIONS) {
+      const [a, b, c] = combo;
+      if (currentGame.board[a] && 
+          currentGame.board[a] === currentGame.board[b] && 
+          currentGame.board[a] === currentGame.board[c]) {
+        return combo;
+      }
+    }
+    return [];
+  };
+
+  const winningLine = getWinningLine();
+
+  // Name input screen
+  if (showNameInput) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
+        <Card className="w-full max-w-md p-8 space-y-6 shadow-2xl">
+          <div className="text-center space-y-2">
+            <Wifi className="h-12 w-12 mx-auto text-primary" />
+            <h2 className="text-2xl font-bold">Online Multiplayer</h2>
+            <p className="text-muted-foreground">Enter your display name</p>
+          </div>
+
+          <div>
+            <input
+              type="text"
+              value={tempName}
+              onChange={(e) => setTempName(e.target.value)}
+              placeholder="Your name"
+              className="w-full px-4 py-3 rounded-lg border-2 border-primary/20 focus:border-primary outline-none bg-background text-center text-lg"
+              maxLength={15}
+            />
+          </div>
+
+          <div className="space-y-3">
+            <Button
+              onClick={() => {
+                if (tempName.trim()) {
+                  savePlayerName(tempName.trim());
+                  setShowNameInput(false);
+                } else {
+                  toast.error('Please enter a name');
+                }
+              }}
+              size="lg"
+              className="w-full h-12 bg-gradient-to-r from-primary to-primary/90"
+              disabled={!tempName.trim()}
+            >
+              Continue
+            </Button>
+            <Button onClick={handleBack} variant="outline" size="lg" className="w-full h-12">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Game in progress
+  if (currentGame) {
+    const myRole = getMyRole();
+    const opponentName = myRole === 'X' ? currentGame.player_o_name : currentGame.player_x_name;
+    const isWaiting = currentGame.status === 'waiting';
+    const isFinished = currentGame.status === 'finished';
+    const iWon = currentGame.winner === myRole;
+    const isDraw = currentGame.winner === 'draw';
+
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
+        <div className="w-full max-w-md space-y-4">
+          <Card className="p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <Button variant="outline" size="sm" onClick={handleLeaveGame}>
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Leave
+              </Button>
+
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${isWaiting ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`} />
+                <span className="text-xs text-muted-foreground">
+                  {isWaiting ? 'Waiting...' : 'Connected'}
+                </span>
+              </div>
+            </div>
+
+            {isWaiting ? (
+              <div className="text-center py-8 space-y-4">
+                <Loader2 className="h-12 w-12 mx-auto text-primary animate-spin" />
+                <div>
+                  <p className="text-lg font-semibold">Waiting for opponent...</p>
+                  <p className="text-sm text-muted-foreground">Share this game with a friend!</p>
+                </div>
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-xs text-muted-foreground">You are playing as</p>
+                  <p className="text-2xl font-bold text-primary">X</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Game status */}
+                <div className="text-center mb-4">
+                  {isFinished ? (
+                    <div className="animate-fade-in">
+                      {isDraw ? (
+                        <p className="text-lg font-semibold text-muted-foreground">It's a Draw!</p>
+                      ) : (
+                        <p className="text-lg font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                          {iWon ? 'You Win! 🎉' : `${opponentName} Wins!`}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center gap-4">
+                      <div className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+                        currentGame.current_player === 'X' 
+                          ? 'bg-primary text-primary-foreground animate-pulse' 
+                          : 'bg-muted text-muted-foreground'
+                      }`}>
+                        {currentGame.player_x_name}
+                      </div>
+                      <span className="text-muted-foreground">vs</span>
+                      <div className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+                        currentGame.current_player === 'O' 
+                          ? 'bg-accent text-accent-foreground animate-pulse' 
+                          : 'bg-muted text-muted-foreground'
+                      }`}>
+                        {currentGame.player_o_name}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {!isFinished && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {isMyTurn() ? "Your turn!" : "Opponent's turn..."}
+                    </p>
+                  )}
+                </div>
+
+                {/* Your role indicator */}
+                <div className="flex justify-center mb-4">
+                  <div className="px-4 py-2 bg-muted rounded-lg">
+                    <span className="text-xs text-muted-foreground">You are </span>
+                    <span className={`font-bold ${myRole === 'X' ? 'text-primary' : 'text-accent'}`}>
+                      {myRole}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Game board */}
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  {currentGame.board.map((cell, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleCellClick(index)}
+                      disabled={!isMyTurn() || cell !== null || isFinished}
+                      className={`game-cell aspect-square text-5xl font-bold ${
+                        cell === 'X' ? 'x' : cell === 'O' ? 'o' : ''
+                      } ${winningLine.includes(index) ? 'winner' : ''} ${
+                        cell ? 'animate-pop-in' : ''
+                      } ${isMyTurn() && !cell && !isFinished ? 'hover:bg-primary/10 cursor-pointer' : ''}`}
+                    >
+                      {cell}
+                    </button>
+                  ))}
+                </div>
+
+                {isFinished && (
+                  <Button onClick={handleLeaveGame} className="w-full" size="lg">
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Play Again
+                  </Button>
+                )}
+              </>
+            )}
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Lobby - find or create game
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
+      <Card className="w-full max-w-md p-6 space-y-6 shadow-2xl">
+        <div className="flex items-center justify-between">
+          <Button variant="outline" size="sm" onClick={handleBack}>
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
+          <div className="flex items-center gap-2">
+            <Wifi className="h-4 w-4 text-green-500" />
+            <span className="text-sm font-medium">{playerName}</span>
+          </div>
+        </div>
+
+        <div className="text-center space-y-2">
+          <Users className="h-10 w-10 mx-auto text-primary" />
+          <h2 className="text-2xl font-bold">Online Lobby</h2>
+          <p className="text-muted-foreground text-sm">Create or join a game</p>
+        </div>
+
+        <Button
+          onClick={handleCreateGame}
+          size="lg"
+          className="w-full h-14 bg-gradient-to-r from-primary to-primary/90"
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+          ) : (
+            <Plus className="mr-2 h-5 w-5" />
+          )}
+          Create New Game
+        </Button>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold">Available Games</h3>
+            <Button variant="ghost" size="sm" onClick={fetchAvailableGames}>
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {availableGames.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground">
+              <WifiOff className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No games available</p>
+              <p className="text-xs">Create one and wait for someone to join!</p>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {availableGames.map((game) => (
+                <div
+                  key={game.id}
+                  className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
+                >
+                  <div>
+                    <p className="font-medium">{game.player_x_name}</p>
+                    <p className="text-xs text-muted-foreground">Waiting for opponent</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => handleJoinGame(game.id)}
+                    disabled={isLoading}
+                  >
+                    Join
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowNameInput(true)}
+          className="w-full"
+        >
+          Change Name
+        </Button>
+      </Card>
+    </div>
+  );
+};

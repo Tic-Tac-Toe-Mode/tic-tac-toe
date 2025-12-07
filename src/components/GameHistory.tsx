@@ -5,7 +5,7 @@ import { History, X, Trash2, Trophy, Minus } from "lucide-react";
 
 export interface GameRecord {
   id: string;
-  mode: "2player" | "ai";
+  mode: "2player" | "ai" | "online";
   aiDifficulty?: "easy" | "medium" | "hard";
   playerX: string;
   playerO: string;
@@ -112,10 +112,14 @@ export const GameHistory = ({ records, onClose, onClear }: GameHistoryProps) => 
                     <span className={`text-xs px-2 py-0.5 rounded ${
                       record.mode === "ai" 
                         ? "bg-accent/10 text-accent" 
+                        : record.mode === "online"
+                        ? "bg-green-500/10 text-green-500"
                         : "bg-primary/10 text-primary"
                     }`}>
                       {record.mode === "ai" 
                         ? `vs AI (${record.aiDifficulty})` 
+                        : record.mode === "online"
+                        ? "Online"
                         : "2 Players"}
                     </span>
                   </div>
