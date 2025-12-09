@@ -59,6 +59,54 @@ export type Database = {
         }
         Relationships: []
       }
+      player_rankings: {
+        Row: {
+          best_streak: number
+          created_at: string | null
+          draws: number
+          elo_rating: number
+          games_played: number
+          highest_elo: number
+          id: string
+          losses: number
+          player_id: string
+          player_name: string
+          updated_at: string | null
+          win_streak: number
+          wins: number
+        }
+        Insert: {
+          best_streak?: number
+          created_at?: string | null
+          draws?: number
+          elo_rating?: number
+          games_played?: number
+          highest_elo?: number
+          id?: string
+          losses?: number
+          player_id: string
+          player_name: string
+          updated_at?: string | null
+          win_streak?: number
+          wins?: number
+        }
+        Update: {
+          best_streak?: number
+          created_at?: string | null
+          draws?: number
+          elo_rating?: number
+          games_played?: number
+          highest_elo?: number
+          id?: string
+          losses?: number
+          player_id?: string
+          player_name?: string
+          updated_at?: string | null
+          win_streak?: number
+          wins?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
