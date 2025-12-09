@@ -12,6 +12,7 @@ export interface OnlineGame {
   current_player: string;
   winner: string | null;
   status: 'waiting' | 'playing' | 'finished';
+  rematch_requested_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -203,6 +204,92 @@ export const useOnlineGame = () => {
     setIsSearching(false);
   };
 
+  // Request rematch
+  const requestRematch = async () => {
+    if (!currentGame || currentGame.status !== 'finished') return false;
+
+    const myRole = getMyRole();
+    if (!myRole) return false;
+
+    // Check if opponent already requested
+    const opponentId = myRole === 'X' ? currentGame.player_o_id : currentGame.player_x_id;
+    
+    if (currentGame.rematch_requested_by === opponentId) {
+      // Both players want rematch - create new game with swapped roles
+      const newGame = await createRematchGame();
+      return !!newGame;
+    }
+
+    // Just mark our request
+    const { error } = await supabase
+      .from('online_games')
+      .update({ rematch_requested_by: playerId })
+      .eq('id', currentGame.id);
+
+    if (error) {
+      console.error('Error requesting rematch:', error);
+      toast.error('Failed to request rematch');
+      return false;
+    }
+
+    toast.success('Rematch requested! Waiting for opponent...');
+    return true;
+  };
+
+  // Create rematch game with swapped roles
+  const createRematchGame = async () => {
+    if (!currentGame) return null;
+
+    const myRole = getMyRole();
+    // Swap roles: previous X becomes O, previous O becomes X
+    const newPlayerXId = currentGame.player_o_id;
+    const newPlayerXName = currentGame.player_o_name;
+    const newPlayerOId = currentGame.player_x_id;
+    const newPlayerOName = currentGame.player_x_name;
+
+    const { data, error } = await supabase
+      .from('online_games')
+      .insert({
+        player_x_id: newPlayerXId,
+        player_x_name: newPlayerXName,
+        player_o_id: newPlayerOId,
+        player_o_name: newPlayerOName,
+        board: Array(9).fill(null),
+        current_player: 'X',
+        status: 'playing'
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating rematch game:', error);
+      toast.error('Failed to create rematch');
+      return null;
+    }
+
+    // Delete old game
+    await supabase
+      .from('online_games')
+      .delete()
+      .eq('id', currentGame.id);
+
+    setCurrentGame(data as unknown as OnlineGame);
+    toast.success('Rematch started! Roles swapped.');
+    return data;
+  };
+
+  // Check if I requested rematch
+  const hasRequestedRematch = useCallback(() => {
+    if (!currentGame) return false;
+    return currentGame.rematch_requested_by === playerId;
+  }, [currentGame, playerId]);
+
+  // Check if opponent requested rematch
+  const opponentRequestedRematch = useCallback(() => {
+    if (!currentGame || !currentGame.rematch_requested_by) return false;
+    return currentGame.rematch_requested_by !== playerId;
+  }, [currentGame, playerId]);
+
   // Subscribe to game updates
   useEffect(() => {
     if (!currentGame) return;
@@ -279,6 +366,9 @@ export const useOnlineGame = () => {
     joinGame,
     makeMove,
     leaveGame,
-    fetchAvailableGames
+    fetchAvailableGames,
+    requestRematch,
+    hasRequestedRematch,
+    opponentRequestedRematch
   };
 };

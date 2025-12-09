@@ -46,7 +46,10 @@ export const OnlineMultiplayer = ({ onBack }: OnlineMultiplayerProps) => {
     joinGame,
     makeMove,
     leaveGame,
-    fetchAvailableGames
+    fetchAvailableGames,
+    requestRematch,
+    hasRequestedRematch,
+    opponentRequestedRematch
   } = useOnlineGame();
 
   const [tempName, setTempName] = useState(playerName);
@@ -282,10 +285,37 @@ export const OnlineMultiplayer = ({ onBack }: OnlineMultiplayerProps) => {
                 </div>
 
                 {isFinished && (
-                  <Button onClick={handleLeaveGame} className="w-full" size="lg">
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    Play Again
-                  </Button>
+                  <div className="space-y-2">
+                    {opponentRequestedRematch() ? (
+                      <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg text-center mb-2">
+                        <p className="text-sm text-green-500 font-medium">
+                          {currentGame.player_x_id === currentGame.rematch_requested_by 
+                            ? currentGame.player_x_name 
+                            : currentGame.player_o_name} wants a rematch!
+                        </p>
+                      </div>
+                    ) : hasRequestedRematch() ? (
+                      <div className="p-3 bg-muted rounded-lg text-center mb-2">
+                        <p className="text-sm text-muted-foreground">
+                          Waiting for opponent to accept rematch...
+                        </p>
+                      </div>
+                    ) : null}
+
+                    <Button 
+                      onClick={requestRematch} 
+                      className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700" 
+                      size="lg"
+                      disabled={hasRequestedRematch()}
+                    >
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                      {opponentRequestedRematch() ? 'Accept Rematch' : hasRequestedRematch() ? 'Rematch Requested' : 'Request Rematch'}
+                    </Button>
+                    
+                    <Button onClick={handleLeaveGame} variant="outline" className="w-full" size="lg">
+                      Back to Lobby
+                    </Button>
+                  </div>
                 )}
               </>
             )}
