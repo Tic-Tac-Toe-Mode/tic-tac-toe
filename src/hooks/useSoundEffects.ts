@@ -112,6 +112,36 @@ export const useSoundEffects = () => {
     }
   }, [isMuted, volume, getAudioContext]);
 
+  const playChatSound = useCallback(() => {
+    if (isMuted) return;
+    
+    try {
+      const ctx = getAudioContext();
+      // Two-note notification sound (like a "ding-dong")
+      const notes = [880, 660]; // A5, E5
+      
+      notes.forEach((freq, i) => {
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+
+        oscillator.type = "sine";
+        const startTime = ctx.currentTime + i * 0.12;
+        oscillator.frequency.setValueAtTime(freq, startTime);
+
+        gainNode.gain.setValueAtTime(volume * 0.25, startTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + 0.2);
+
+        oscillator.start(startTime);
+        oscillator.stop(startTime + 0.2);
+      });
+    } catch (e) {
+      console.warn("Audio playback failed:", e);
+    }
+  }, [isMuted, volume, getAudioContext]);
+
   return {
     volume,
     setVolume,
@@ -120,5 +150,6 @@ export const useSoundEffects = () => {
     playMoveSound,
     playWinSound,
     playDrawSound,
+    playChatSound,
   };
 };

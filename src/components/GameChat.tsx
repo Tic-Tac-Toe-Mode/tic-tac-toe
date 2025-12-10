@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, MessageCircle, X } from 'lucide-react';
 import { ChatMessage, useGameChat } from '@/hooks/useGameChat';
+import { useSoundEffects } from '@/hooks/useSoundEffects';
 
 interface GameChatProps {
   gameId: string;
@@ -15,24 +16,34 @@ const GameChat: React.FC<GameChatProps> = ({ gameId, playerId, playerName }) => 
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const { messages, sendMessage, opponentTyping, setTyping } = useGameChat(gameId, playerId, playerName);
+  const { playChatSound } = useSoundEffects();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const typingDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const prevMessageCountRef = useRef(0);
 
-  // Auto-scroll to bottom on new messages
+  // Auto-scroll to bottom on new messages and play sound for incoming messages
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
     
-    // Track unread when chat is closed
-    if (!isOpen && messages.length > 0) {
+    // Check if there's a new message from opponent
+    if (messages.length > prevMessageCountRef.current && messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
       if (lastMessage.player_id !== playerId) {
-        setUnreadCount(prev => prev + 1);
+        // Play notification sound for opponent's message
+        playChatSound();
+        
+        // Track unread when chat is closed
+        if (!isOpen) {
+          setUnreadCount(prev => prev + 1);
+        }
       }
     }
-  }, [messages, isOpen, playerId]);
+    
+    prevMessageCountRef.current = messages.length;
+  }, [messages, isOpen, playerId, playChatSound]);
 
   // Clear unread when opening chat
   useEffect(() => {
