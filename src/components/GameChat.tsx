@@ -14,9 +14,10 @@ interface GameChatProps {
 const GameChat: React.FC<GameChatProps> = ({ gameId, playerId, playerName }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
-  const { messages, sendMessage } = useGameChat(gameId, playerId, playerName);
+  const { messages, sendMessage, opponentTyping, setTyping } = useGameChat(gameId, playerId, playerName);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const typingDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -40,10 +41,30 @@ const GameChat: React.FC<GameChatProps> = ({ gameId, playerId, playerName }) => 
     }
   }, [isOpen]);
 
+  // Handle typing indicator
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputMessage(e.target.value);
+    
+    // Broadcast typing status
+    setTyping(true);
+    
+    // Debounce to stop typing after user stops
+    if (typingDebounceRef.current) {
+      clearTimeout(typingDebounceRef.current);
+    }
+    typingDebounceRef.current = setTimeout(() => {
+      setTyping(false);
+    }, 2000);
+  };
+
   const handleSend = () => {
     if (inputMessage.trim()) {
       sendMessage(inputMessage);
       setInputMessage('');
+      setTyping(false);
+      if (typingDebounceRef.current) {
+        clearTimeout(typingDebounceRef.current);
+      }
     }
   };
 
@@ -128,6 +149,20 @@ const GameChat: React.FC<GameChatProps> = ({ gameId, playerId, playerName }) => 
               );
             })
           )}
+          
+          {/* Typing Indicator */}
+          {opponentTyping && (
+            <div className="flex items-start">
+              <div className="bg-muted rounded-lg px-3 py-2">
+                <p className="text-xs font-semibold mb-1 opacity-80">{opponentTyping}</p>
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </ScrollArea>
 
@@ -136,7 +171,7 @@ const GameChat: React.FC<GameChatProps> = ({ gameId, playerId, playerName }) => 
         <div className="flex gap-2">
           <Input
             value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
+            onChange={handleInputChange}
             onKeyPress={handleKeyPress}
             placeholder="Type a message..."
             className="flex-1"
