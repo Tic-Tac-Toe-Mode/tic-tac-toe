@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { useOnlineGame, OnlineGame } from '@/hooks/useOnlineGame';
 import { usePlayerRanking } from '@/hooks/usePlayerRanking';
 import { OnlineRankings } from '@/components/OnlineRankings';
+import GameChat from '@/components/GameChat';
 import { ArrowLeft, Users, Plus, RefreshCw, Wifi, WifiOff, Loader2, RotateCcw, Trophy, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
@@ -402,6 +403,15 @@ export const OnlineMultiplayer = ({ onBack }: OnlineMultiplayerProps) => {
               </>
             )}
           </Card>
+
+          {/* Chat component - show when game is active and has opponent */}
+          {!isWaiting && currentGame.player_o_id && (
+            <GameChat
+              gameId={currentGame.id}
+              playerId={playerId}
+              playerName={playerName}
+            />
+          )}
         </div>
       </div>
     );
