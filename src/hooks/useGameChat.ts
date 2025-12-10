@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface ChatMessage {
@@ -13,6 +13,9 @@ export interface ChatMessage {
 export const useGameChat = (gameId: string | null, playerId: string, playerName: string) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [opponentTyping, setOpponentTyping] = useState<string | null>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const presenceChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   // Fetch existing messages
   const fetchMessages = useCallback(async () => {
@@ -49,13 +52,25 @@ export const useGameChat = (gameId: string | null, playerId: string, playerName:
     }
   };
 
-  // Subscribe to new messages
+  // Broadcast typing status
+  const setTyping = useCallback((isTyping: boolean) => {
+    if (!presenceChannelRef.current) return;
+    
+    presenceChannelRef.current.send({
+      type: 'broadcast',
+      event: 'typing',
+      payload: { playerId, playerName, isTyping }
+    });
+  }, [playerId, playerName]);
+
+  // Subscribe to messages and typing presence
   useEffect(() => {
     if (!gameId) return;
 
     fetchMessages();
 
-    const channel = supabase
+    // Messages channel
+    const messagesChannel = supabase
       .channel(`chat-${gameId}`)
       .on(
         'postgres_changes',
@@ -71,21 +86,54 @@ export const useGameChat = (gameId: string | null, playerId: string, playerName:
       )
       .subscribe();
 
+    // Presence channel for typing indicator
+    const presenceChannel = supabase
+      .channel(`typing-${gameId}`)
+      .on('broadcast', { event: 'typing' }, ({ payload }) => {
+        if (payload.playerId !== playerId) {
+          if (payload.isTyping) {
+            setOpponentTyping(payload.playerName);
+            // Clear typing after 3 seconds of no updates
+            if (typingTimeoutRef.current) {
+              clearTimeout(typingTimeoutRef.current);
+            }
+            typingTimeoutRef.current = setTimeout(() => {
+              setOpponentTyping(null);
+            }, 3000);
+          } else {
+            setOpponentTyping(null);
+            if (typingTimeoutRef.current) {
+              clearTimeout(typingTimeoutRef.current);
+            }
+          }
+        }
+      })
+      .subscribe();
+
+    presenceChannelRef.current = presenceChannel;
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(presenceChannel);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
     };
-  }, [gameId, fetchMessages]);
+  }, [gameId, fetchMessages, playerId]);
 
   // Clear messages when game changes
   useEffect(() => {
     if (!gameId) {
       setMessages([]);
+      setOpponentTyping(null);
     }
   }, [gameId]);
 
   return {
     messages,
     sendMessage,
-    isLoading
+    isLoading,
+    opponentTyping,
+    setTyping
   };
 };
