@@ -2,10 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, MessageCircle, X, Smile } from 'lucide-react';
+import { Send, MessageCircle, X, Smile, Volume2, VolumeX } from 'lucide-react';
 import { ChatMessage, useGameChat } from '@/hooks/useGameChat';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
 import { QuickChatEmojis, QuickChatMessages } from './QuickChatEmojis';
+import MessageReactions from './MessageReactions';
 
 interface GameChatProps {
   gameId: string;
@@ -16,13 +17,23 @@ interface GameChatProps {
 const GameChat: React.FC<GameChatProps> = ({ gameId, playerId, playerName }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
-  const { messages, sendMessage, opponentTyping, setTyping } = useGameChat(gameId, playerId, playerName);
+  const [isChatMuted, setIsChatMuted] = useState(() => {
+    return localStorage.getItem('tictactoe-chat-muted') === 'true';
+  });
+  const { messages, sendMessage, toggleReaction, opponentTyping, setTyping } = useGameChat(gameId, playerId, playerName);
   const { playChatSound } = useSoundEffects();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showEmojis, setShowEmojis] = useState(false);
   const typingDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const prevMessageCountRef = useRef(0);
+
+  // Toggle chat mute
+  const toggleChatMute = () => {
+    const newMuted = !isChatMuted;
+    setIsChatMuted(newMuted);
+    localStorage.setItem('tictactoe-chat-muted', String(newMuted));
+  };
 
   // Auto-scroll to bottom on new messages and play sound for incoming messages
   useEffect(() => {
@@ -34,8 +45,10 @@ const GameChat: React.FC<GameChatProps> = ({ gameId, playerId, playerName }) => 
     if (messages.length > prevMessageCountRef.current && messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
       if (lastMessage.player_id !== playerId) {
-        // Play notification sound for opponent's message
-        playChatSound();
+        // Play notification sound for opponent's message (if not muted)
+        if (!isChatMuted) {
+          playChatSound();
+        }
         
         // Track unread when chat is closed
         if (!isOpen) {
@@ -45,7 +58,7 @@ const GameChat: React.FC<GameChatProps> = ({ gameId, playerId, playerName }) => 
     }
     
     prevMessageCountRef.current = messages.length;
-  }, [messages, isOpen, playerId, playChatSound]);
+  }, [messages, isOpen, playerId, playChatSound, isChatMuted]);
 
   // Clear unread when opening chat
   useEffect(() => {
@@ -114,21 +127,32 @@ const GameChat: React.FC<GameChatProps> = ({ gameId, playerId, playerName }) => 
   }
 
   return (
-    <div className="fixed bottom-4 right-4 w-80 h-96 bg-card border border-border rounded-lg shadow-xl flex flex-col overflow-hidden z-50">
+    <div className="fixed bottom-4 right-4 w-80 h-[28rem] bg-card border border-border rounded-lg shadow-xl flex flex-col overflow-hidden z-50">
       {/* Header */}
       <div className="flex items-center justify-between p-3 bg-primary text-primary-foreground">
         <div className="flex items-center gap-2">
           <MessageCircle className="w-5 h-5" />
           <span className="font-semibold">Game Chat</span>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setIsOpen(false)}
-          className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
-        >
-          <X className="w-4 h-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleChatMute}
+            className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
+            title={isChatMuted ? 'Unmute chat sounds' : 'Mute chat sounds'}
+          >
+            {isChatMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsOpen(false)}
+            className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Messages */}
@@ -144,7 +168,7 @@ const GameChat: React.FC<GameChatProps> = ({ gameId, playerId, playerName }) => 
               return (
                 <div
                   key={msg.id}
-                  className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}
+                  className={`flex flex-col group ${isOwn ? 'items-end' : 'items-start'}`}
                 >
                   <div
                     className={`max-w-[80%] rounded-lg px-3 py-2 ${
@@ -160,7 +184,15 @@ const GameChat: React.FC<GameChatProps> = ({ gameId, playerId, playerName }) => 
                     )}
                     <p className="text-sm break-words">{msg.message}</p>
                   </div>
-                  <span className="text-xs text-muted-foreground mt-1">
+                  {/* Reactions */}
+                  <div className="mt-1">
+                    <MessageReactions
+                      reactions={msg.reactions || {}}
+                      playerId={playerId}
+                      onReact={(emoji) => toggleReaction(msg.id, emoji)}
+                    />
+                  </div>
+                  <span className="text-xs text-muted-foreground mt-0.5">
                     {formatTime(msg.created_at)}
                   </span>
                 </div>

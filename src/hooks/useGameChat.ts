@@ -8,6 +8,7 @@ export interface ChatMessage {
   player_name: string;
   message: string;
   created_at: string;
+  reactions: Record<string, string[]>; // { emoji: [playerId1, playerId2] }
 }
 
 export const useGameChat = (gameId: string | null, playerId: string, playerName: string) => {
@@ -29,7 +30,10 @@ export const useGameChat = (gameId: string | null, playerId: string, playerName:
       .order('created_at', { ascending: true });
     
     if (!error && data) {
-      setMessages(data);
+      setMessages(data.map(msg => ({
+        ...msg,
+        reactions: (msg.reactions as Record<string, string[]>) || {}
+      })));
     }
     setIsLoading(false);
   }, [gameId]);
@@ -44,11 +48,41 @@ export const useGameChat = (gameId: string | null, playerId: string, playerName:
         game_id: gameId,
         player_id: playerId,
         player_name: playerName,
-        message: message.trim()
+        message: message.trim(),
+        reactions: {}
       });
 
     if (error) {
       console.error('Error sending message:', error);
+    }
+  };
+
+  // Add or remove a reaction
+  const toggleReaction = async (messageId: string, emoji: string) => {
+    const message = messages.find(m => m.id === messageId);
+    if (!message) return;
+
+    const currentReactions = { ...message.reactions };
+    const emojiReactions = currentReactions[emoji] || [];
+    
+    if (emojiReactions.includes(playerId)) {
+      // Remove reaction
+      currentReactions[emoji] = emojiReactions.filter(id => id !== playerId);
+      if (currentReactions[emoji].length === 0) {
+        delete currentReactions[emoji];
+      }
+    } else {
+      // Add reaction
+      currentReactions[emoji] = [...emojiReactions, playerId];
+    }
+
+    const { error } = await supabase
+      .from('game_chat_messages')
+      .update({ reactions: currentReactions })
+      .eq('id', messageId);
+
+    if (error) {
+      console.error('Error updating reaction:', error);
     }
   };
 
@@ -69,7 +103,7 @@ export const useGameChat = (gameId: string | null, playerId: string, playerName:
 
     fetchMessages();
 
-    // Messages channel
+    // Messages channel - listen for INSERT and UPDATE
     const messagesChannel = supabase
       .channel(`chat-${gameId}`)
       .on(
@@ -81,7 +115,28 @@ export const useGameChat = (gameId: string | null, playerId: string, playerName:
           filter: `game_id=eq.${gameId}`
         },
         (payload) => {
-          setMessages(prev => [...prev, payload.new as ChatMessage]);
+          const newMsg = payload.new as any;
+          setMessages(prev => [...prev, {
+            ...newMsg,
+            reactions: newMsg.reactions || {}
+          }]);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'game_chat_messages',
+          filter: `game_id=eq.${gameId}`
+        },
+        (payload) => {
+          const updatedMsg = payload.new as any;
+          setMessages(prev => prev.map(msg => 
+            msg.id === updatedMsg.id 
+              ? { ...msg, reactions: updatedMsg.reactions || {} }
+              : msg
+          ));
         }
       )
       .subscribe();
@@ -132,6 +187,7 @@ export const useGameChat = (gameId: string | null, playerId: string, playerName:
   return {
     messages,
     sendMessage,
+    toggleReaction,
     isLoading,
     opponentTyping,
     setTyping
