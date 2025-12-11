@@ -22,6 +22,7 @@ export type Database = {
           message: string
           player_id: string
           player_name: string
+          reactions: Json | null
         }
         Insert: {
           created_at?: string
@@ -30,6 +31,7 @@ export type Database = {
           message: string
           player_id: string
           player_name: string
+          reactions?: Json | null
         }
         Update: {
           created_at?: string
@@ -38,6 +40,7 @@ export type Database = {
           message?: string
           player_id?: string
           player_name?: string
+          reactions?: Json | null
         }
         Relationships: [
           {
