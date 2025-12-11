@@ -7,7 +7,8 @@ import { OnlineRankings } from '@/components/OnlineRankings';
 import GameChat from '@/components/GameChat';
 import SpectatorMode from '@/components/SpectatorMode';
 import TournamentMode from '@/components/TournamentMode';
-import { ArrowLeft, Users, Plus, RefreshCw, Wifi, WifiOff, Loader2, RotateCcw, Trophy, TrendingUp, TrendingDown, Minus, Eye, Swords } from 'lucide-react';
+import { GameReplay } from '@/components/GameReplay';
+import { ArrowLeft, Users, Plus, RefreshCw, Wifi, WifiOff, Loader2, RotateCcw, Trophy, TrendingUp, TrendingDown, Minus, Eye, Swords, Film } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
@@ -71,6 +72,7 @@ export const OnlineMultiplayer = ({ onBack }: OnlineMultiplayerProps) => {
   const [showRankings, setShowRankings] = useState(false);
   const [showSpectator, setShowSpectator] = useState(false);
   const [showTournament, setShowTournament] = useState(false);
+  const [showReplay, setShowReplay] = useState(false);
   const [eloUpdated, setEloUpdated] = useState(false);
   const prevGameRef = useRef<OnlineGame | null>(null);
   const { playMoveSound, playWinSound, playDrawSound } = useSoundEffects();
@@ -217,6 +219,11 @@ export const OnlineMultiplayer = ({ onBack }: OnlineMultiplayerProps) => {
         onBack={() => setShowTournament(false)}
       />
     );
+  }
+
+  // Replay view
+  if (showReplay) {
+    return <GameReplay onClose={() => setShowReplay(false)} />;
   }
   if (showNameInput) {
     return (
@@ -520,6 +527,15 @@ export const OnlineMultiplayer = ({ onBack }: OnlineMultiplayerProps) => {
             title="Watch live games"
           >
             <Eye className="h-5 w-5" />
+          </Button>
+          <Button
+            onClick={() => setShowReplay(true)}
+            size="lg"
+            variant="outline"
+            className="h-14"
+            title="Watch replays"
+          >
+            <Film className="h-5 w-5" />
           </Button>
           <Button
             onClick={() => setShowRankings(true)}

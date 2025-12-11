@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Trophy, Users, Plus, RefreshCw, Crown, Swords, Medal } from 'lucide-react';
+import { ArrowLeft, Trophy, Users, Plus, RefreshCw, Crown, Swords, Medal, Gift, TrendingUp } from 'lucide-react';
 import { useTournament, Tournament, TournamentMatch } from '@/hooks/useTournament';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface TournamentModeProps {
   playerId: string;
@@ -30,12 +32,81 @@ const TournamentMode: React.FC<TournamentModeProps> = ({ playerId, playerName, o
   const [showCreate, setShowCreate] = useState(false);
   const [tournamentName, setTournamentName] = useState('');
   const [maxPlayers, setMaxPlayers] = useState<4 | 8>(8);
+  const [winnerBonus, setWinnerBonus] = useState(50);
+  const [runnerUpBonus, setRunnerUpBonus] = useState(25);
+  const [participantBonus, setParticipantBonus] = useState(10);
 
   const handleCreate = async () => {
     if (!tournamentName.trim()) return;
-    await createTournament(tournamentName.trim(), maxPlayers);
+    await createTournament(tournamentName.trim(), maxPlayers, {
+      winner: winnerBonus,
+      runnerUp: runnerUpBonus,
+      participant: participantBonus
+    });
     setShowCreate(false);
     setTournamentName('');
+  };
+
+  // Apply tournament prizes
+  const applyTournamentPrizes = async (tournament: Tournament, winnerId: string, runnerUpId: string) => {
+    // Apply winner bonus
+    const { data: winnerRanking } = await supabase
+      .from('player_rankings')
+      .select('elo_rating')
+      .eq('player_id', winnerId)
+      .maybeSingle();
+
+    if (winnerRanking) {
+      await supabase
+        .from('player_rankings')
+        .update({ 
+          elo_rating: winnerRanking.elo_rating + tournament.winner_elo_bonus,
+          highest_elo: Math.max(winnerRanking.elo_rating + tournament.winner_elo_bonus, winnerRanking.elo_rating)
+        })
+        .eq('player_id', winnerId);
+    }
+
+    // Apply runner-up bonus
+    const { data: runnerUpRanking } = await supabase
+      .from('player_rankings')
+      .select('elo_rating')
+      .eq('player_id', runnerUpId)
+      .maybeSingle();
+
+    if (runnerUpRanking) {
+      await supabase
+        .from('player_rankings')
+        .update({ 
+          elo_rating: runnerUpRanking.elo_rating + tournament.runner_up_elo_bonus,
+          highest_elo: Math.max(runnerUpRanking.elo_rating + tournament.runner_up_elo_bonus, runnerUpRanking.elo_rating)
+        })
+        .eq('player_id', runnerUpId);
+    }
+
+    // Apply participant bonus to all other participants
+    const otherParticipants = participants.filter(
+      p => p.player_id !== winnerId && p.player_id !== runnerUpId
+    );
+
+    for (const participant of otherParticipants) {
+      const { data: participantRanking } = await supabase
+        .from('player_rankings')
+        .select('elo_rating')
+        .eq('player_id', participant.player_id)
+        .maybeSingle();
+
+      if (participantRanking) {
+        await supabase
+          .from('player_rankings')
+          .update({ 
+            elo_rating: participantRanking.elo_rating + tournament.participant_elo_bonus,
+            highest_elo: Math.max(participantRanking.elo_rating + tournament.participant_elo_bonus, participantRanking.elo_rating)
+          })
+          .eq('player_id', participant.player_id);
+      }
+    }
+
+    toast.success('Tournament prizes distributed!');
   };
 
   const getRoundName = (round: number, totalRounds: number) => {
@@ -221,6 +292,11 @@ const TournamentMode: React.FC<TournamentModeProps> = ({ playerId, playerName, o
 
   // Tournament finished
   if (currentTournament && currentTournament.status === 'finished') {
+    const finalMatch = matches.find(m => m.round === Math.log2(currentTournament.max_players));
+    const runnerUpId = finalMatch 
+      ? (finalMatch.winner_id === finalMatch.player1_id ? finalMatch.player2_id : finalMatch.player1_id)
+      : null;
+
     return (
       <div className="min-h-screen bg-background p-4">
         <div className="max-w-md mx-auto">
@@ -234,10 +310,38 @@ const TournamentMode: React.FC<TournamentModeProps> = ({ playerId, playerName, o
               <Trophy className="w-16 h-16 mx-auto text-yellow-500 mb-2" />
               <CardTitle>Tournament Complete!</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-lg">Winner:</p>
-              <p className="text-2xl font-bold text-primary">{currentTournament.winner_name}</p>
-              <Button onClick={leaveTournament} className="mt-4">
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-lg">Winner:</p>
+                <p className="text-2xl font-bold text-primary">{currentTournament.winner_name}</p>
+              </div>
+
+              {/* Prizes */}
+              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                <h4 className="font-semibold flex items-center justify-center gap-2">
+                  <Gift className="w-4 h-4 text-yellow-500" />
+                  ELO Prizes
+                </h4>
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <div className="bg-yellow-500/10 rounded p-2">
+                    <Trophy className="w-4 h-4 mx-auto text-yellow-500 mb-1" />
+                    <p className="text-xs text-muted-foreground">Winner</p>
+                    <p className="font-bold text-green-500">+{currentTournament.winner_elo_bonus}</p>
+                  </div>
+                  <div className="bg-gray-500/10 rounded p-2">
+                    <Medal className="w-4 h-4 mx-auto text-gray-400 mb-1" />
+                    <p className="text-xs text-muted-foreground">2nd</p>
+                    <p className="font-bold text-green-500">+{currentTournament.runner_up_elo_bonus}</p>
+                  </div>
+                  <div className="bg-amber-500/10 rounded p-2">
+                    <Users className="w-4 h-4 mx-auto text-amber-600 mb-1" />
+                    <p className="text-xs text-muted-foreground">Others</p>
+                    <p className="font-bold text-green-500">+{currentTournament.participant_elo_bonus}</p>
+                  </div>
+                </div>
+              </div>
+
+              <Button onClick={leaveTournament} className="w-full">
                 Return to Lobby
               </Button>
             </CardContent>
@@ -292,6 +396,43 @@ const TournamentMode: React.FC<TournamentModeProps> = ({ playerId, playerName, o
                   >
                     8 Players
                   </Button>
+                </div>
+              </div>
+
+              {/* Prize configuration */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Gift className="w-4 h-4 text-yellow-500" />
+                  ELO Prizes
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-xs text-muted-foreground">Winner</label>
+                    <Input
+                      type="number"
+                      value={winnerBonus}
+                      onChange={(e) => setWinnerBonus(Math.max(0, parseInt(e.target.value) || 0))}
+                      className="text-center"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">2nd Place</label>
+                    <Input
+                      type="number"
+                      value={runnerUpBonus}
+                      onChange={(e) => setRunnerUpBonus(Math.max(0, parseInt(e.target.value) || 0))}
+                      className="text-center"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Others</label>
+                    <Input
+                      type="number"
+                      value={participantBonus}
+                      onChange={(e) => setParticipantBonus(Math.max(0, parseInt(e.target.value) || 0))}
+                      className="text-center"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -351,14 +492,20 @@ const TournamentMode: React.FC<TournamentModeProps> = ({ playerId, playerName, o
                       key={tournament.id}
                       className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                     >
-                      <div>
-                        <p className="font-medium">{tournament.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {tournament.status === 'waiting' 
-                            ? `Waiting for players • ${tournament.max_players} slots`
-                            : 'In progress'}
-                        </p>
-                      </div>
+                                    <div>
+                                        <p className="font-medium">{tournament.name}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {tournament.status === 'waiting' 
+                                            ? `Waiting • ${tournament.max_players} slots`
+                                            : 'In progress'}
+                                        </p>
+                                        {tournament.status === 'waiting' && (
+                                          <p className="text-xs text-green-500 flex items-center gap-1 mt-1">
+                                            <TrendingUp className="w-3 h-3" />
+                                            +{tournament.winner_elo_bonus}/{tournament.runner_up_elo_bonus}/{tournament.participant_elo_bonus} ELO
+                                          </p>
+                                        )}
+                                      </div>
                       {tournament.status === 'waiting' && (
                         <Button
                           size="sm"
