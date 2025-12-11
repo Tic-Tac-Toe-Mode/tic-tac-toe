@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Eye, RefreshCw, Users } from 'lucide-react';
 import { useSpectatorMode, SpectatorGame } from '@/hooks/useSpectatorMode';
+import SpectatorChat from './SpectatorChat';
 
 interface SpectatorModeProps {
   onBack: () => void;
+  playerId?: string;
+  playerName?: string;
 }
 
 const WINNING_COMBINATIONS = [
@@ -14,7 +17,7 @@ const WINNING_COMBINATIONS = [
   [0, 4, 8], [2, 4, 6]
 ];
 
-const SpectatorMode: React.FC<SpectatorModeProps> = ({ onBack }) => {
+const SpectatorMode: React.FC<SpectatorModeProps> = ({ onBack, playerId = '', playerName = 'Spectator' }) => {
   const { activeGames, spectatingGame, isLoading, fetchActiveGames, spectateGame, stopSpectating } = useSpectatorMode();
 
   const getWinningLine = (board: (string | null)[], winner: string | null): number[] | null => {
@@ -33,8 +36,8 @@ const SpectatorMode: React.FC<SpectatorModeProps> = ({ onBack }) => {
     
     return (
       <div className="min-h-screen bg-background p-4">
-        <div className="max-w-md mx-auto">
-          <Button variant="ghost" onClick={stopSpectating} className="mb-4">
+        <div className="max-w-md mx-auto space-y-4">
+          <Button variant="ghost" onClick={stopSpectating} className="mb-2">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Games
           </Button>
@@ -102,6 +105,15 @@ const SpectatorMode: React.FC<SpectatorModeProps> = ({ onBack }) => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Spectator Chat */}
+          {playerId && (
+            <SpectatorChat
+              gameId={spectatingGame.id}
+              playerId={playerId}
+              playerName={playerName}
+            />
+          )}
         </div>
       </div>
     );

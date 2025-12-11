@@ -148,6 +148,170 @@ export type Database = {
         }
         Relationships: []
       }
+      spectator_chat: {
+        Row: {
+          created_at: string | null
+          game_id: string
+          id: string
+          message: string
+          player_id: string
+          player_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          game_id: string
+          id?: string
+          message: string
+          player_id: string
+          player_name: string
+        }
+        Update: {
+          created_at?: string | null
+          game_id?: string
+          id?: string
+          message?: string
+          player_id?: string
+          player_name?: string
+        }
+        Relationships: []
+      }
+      tournament_matches: {
+        Row: {
+          created_at: string | null
+          game_id: string | null
+          id: string
+          match_number: number
+          player1_id: string | null
+          player1_name: string | null
+          player2_id: string | null
+          player2_name: string | null
+          round: number
+          status: string | null
+          tournament_id: string
+          winner_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          game_id?: string | null
+          id?: string
+          match_number: number
+          player1_id?: string | null
+          player1_name?: string | null
+          player2_id?: string | null
+          player2_name?: string | null
+          round: number
+          status?: string | null
+          tournament_id: string
+          winner_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          game_id?: string | null
+          id?: string
+          match_number?: number
+          player1_id?: string | null
+          player1_name?: string | null
+          player2_id?: string | null
+          player2_name?: string | null
+          round?: number
+          status?: string | null
+          tournament_id?: string
+          winner_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_matches_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "online_games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_matches_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tournament_participants: {
+        Row: {
+          created_at: string | null
+          eliminated: boolean | null
+          id: string
+          player_id: string
+          player_name: string
+          seed: number | null
+          tournament_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          eliminated?: boolean | null
+          id?: string
+          player_id: string
+          player_name: string
+          seed?: number | null
+          tournament_id: string
+        }
+        Update: {
+          created_at?: string | null
+          eliminated?: boolean | null
+          id?: string
+          player_id?: string
+          player_name?: string
+          seed?: number | null
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_participants_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tournaments: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          current_round: number | null
+          id: string
+          max_players: number | null
+          name: string
+          status: string | null
+          updated_at: string | null
+          winner_id: string | null
+          winner_name: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          current_round?: number | null
+          id?: string
+          max_players?: number | null
+          name: string
+          status?: string | null
+          updated_at?: string | null
+          winner_id?: string | null
+          winner_name?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          current_round?: number | null
+          id?: string
+          max_players?: number | null
+          name?: string
+          status?: string | null
+          updated_at?: string | null
+          winner_id?: string | null
+          winner_name?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
