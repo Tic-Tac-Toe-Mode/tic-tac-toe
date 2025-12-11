@@ -2,6 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+export interface GameMove {
+  player: 'X' | 'O';
+  position: number;
+  timestamp: string;
+}
+
 export interface OnlineGame {
   id: string;
   player_x_id: string;
@@ -13,6 +19,7 @@ export interface OnlineGame {
   winner: string | null;
   status: 'waiting' | 'playing' | 'finished';
   rematch_requested_by: string | null;
+  move_history: GameMove[];
   created_at: string;
   updated_at: string;
 }
@@ -153,6 +160,14 @@ export const useOnlineGame = () => {
     
     newBoard[index] = myRole;
 
+    // Track move in history
+    const newMove: GameMove = {
+      player: myRole!,
+      position: index,
+      timestamp: new Date().toISOString()
+    };
+    const newMoveHistory = [...(currentGame.move_history || []), newMove];
+
     // Check for winner
     const winner = checkWinner(newBoard);
     const isDraw = !winner && newBoard.every(cell => cell !== null);
@@ -163,7 +178,8 @@ export const useOnlineGame = () => {
         board: newBoard,
         current_player: myRole === 'X' ? 'O' : 'X',
         winner: winner || (isDraw ? 'draw' : null),
-        status: winner || isDraw ? 'finished' : 'playing'
+        status: winner || isDraw ? 'finished' : 'playing',
+        move_history: newMoveHistory as unknown as null
       })
       .eq('id', currentGame.id);
 
@@ -252,7 +268,8 @@ export const useOnlineGame = () => {
         current_player: 'X',
         winner: null,
         status: 'playing',
-        rematch_requested_by: null
+        rematch_requested_by: null,
+        move_history: []
       })
       .eq('id', currentGame.id);
 

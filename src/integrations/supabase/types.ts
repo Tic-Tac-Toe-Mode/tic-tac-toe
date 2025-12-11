@@ -61,6 +61,7 @@ export type Database = {
           created_at: string | null
           current_player: string | null
           id: string
+          move_history: Json | null
           player_o_id: string | null
           player_o_name: string | null
           player_x_id: string
@@ -75,6 +76,7 @@ export type Database = {
           created_at?: string | null
           current_player?: string | null
           id?: string
+          move_history?: Json | null
           player_o_id?: string | null
           player_o_name?: string | null
           player_x_id: string
@@ -89,6 +91,7 @@ export type Database = {
           created_at?: string | null
           current_player?: string | null
           id?: string
+          move_history?: Json | null
           player_o_id?: string | null
           player_o_name?: string | null
           player_x_id?: string
@@ -281,8 +284,11 @@ export type Database = {
           id: string
           max_players: number | null
           name: string
+          participant_elo_bonus: number | null
+          runner_up_elo_bonus: number | null
           status: string | null
           updated_at: string | null
+          winner_elo_bonus: number | null
           winner_id: string | null
           winner_name: string | null
         }
@@ -293,8 +299,11 @@ export type Database = {
           id?: string
           max_players?: number | null
           name: string
+          participant_elo_bonus?: number | null
+          runner_up_elo_bonus?: number | null
           status?: string | null
           updated_at?: string | null
+          winner_elo_bonus?: number | null
           winner_id?: string | null
           winner_name?: string | null
         }
@@ -305,8 +314,11 @@ export type Database = {
           id?: string
           max_players?: number | null
           name?: string
+          participant_elo_bonus?: number | null
+          runner_up_elo_bonus?: number | null
           status?: string | null
           updated_at?: string | null
+          winner_elo_bonus?: number | null
           winner_id?: string | null
           winner_name?: string | null
         }

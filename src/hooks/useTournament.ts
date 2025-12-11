@@ -11,6 +11,9 @@ export interface Tournament {
   current_round: number;
   winner_id: string | null;
   winner_name: string | null;
+  winner_elo_bonus: number;
+  runner_up_elo_bonus: number;
+  participant_elo_bonus: number;
   created_at: string;
 }
 
@@ -59,7 +62,7 @@ export const useTournament = (playerId: string, playerName: string) => {
   }, []);
 
   // Create a tournament
-  const createTournament = async (name: string, maxPlayers: 4 | 8) => {
+  const createTournament = async (name: string, maxPlayers: 4 | 8, prizes?: { winner: number; runnerUp: number; participant: number }) => {
     setIsLoading(true);
     const { data, error } = await supabase
       .from('tournaments')
@@ -67,7 +70,10 @@ export const useTournament = (playerId: string, playerName: string) => {
         name,
         created_by: playerId,
         max_players: maxPlayers,
-        status: 'waiting'
+        status: 'waiting',
+        winner_elo_bonus: prizes?.winner ?? 50,
+        runner_up_elo_bonus: prizes?.runnerUp ?? 25,
+        participant_elo_bonus: prizes?.participant ?? 10
       })
       .select()
       .single();
