@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, MessageCircle, X, Smile, Volume2, VolumeX } from 'lucide-react';
+import { Send, MessageCircle, X, Smile, Volume2, VolumeX, Check, CheckCheck } from 'lucide-react';
 import { ChatMessage, useGameChat } from '@/hooks/useGameChat';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
 import { QuickChatEmojis, QuickChatMessages } from './QuickChatEmojis';
@@ -20,7 +20,7 @@ const GameChat: React.FC<GameChatProps> = ({ gameId, playerId, playerName }) => 
   const [isChatMuted, setIsChatMuted] = useState(() => {
     return localStorage.getItem('tictactoe-chat-muted') === 'true';
   });
-  const { messages, sendMessage, toggleReaction, opponentTyping, setTyping } = useGameChat(gameId, playerId, playerName);
+  const { messages, sendMessage, toggleReaction, markMessagesAsRead, opponentTyping, setTyping } = useGameChat(gameId, playerId, playerName);
   const { playChatSound } = useSoundEffects();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -60,12 +60,25 @@ const GameChat: React.FC<GameChatProps> = ({ gameId, playerId, playerName }) => 
     prevMessageCountRef.current = messages.length;
   }, [messages, isOpen, playerId, playChatSound, isChatMuted]);
 
-  // Clear unread when opening chat
+  // Mark messages as read when chat is open
   useEffect(() => {
     if (isOpen) {
       setUnreadCount(0);
+      markMessagesAsRead();
     }
-  }, [isOpen]);
+  }, [isOpen, markMessagesAsRead]);
+
+  // Also mark as read when new messages arrive while chat is open
+  useEffect(() => {
+    if (isOpen && messages.length > 0) {
+      const hasUnreadFromOpponent = messages.some(
+        msg => msg.player_id !== playerId && !msg.read_at
+      );
+      if (hasUnreadFromOpponent) {
+        markMessagesAsRead();
+      }
+    }
+  }, [isOpen, messages, playerId, markMessagesAsRead]);
 
   // Handle typing indicator
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -192,9 +205,21 @@ const GameChat: React.FC<GameChatProps> = ({ gameId, playerId, playerName }) => 
                       onReact={(emoji) => toggleReaction(msg.id, emoji)}
                     />
                   </div>
-                  <span className="text-xs text-muted-foreground mt-0.5">
-                    {formatTime(msg.created_at)}
-                  </span>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className="text-xs text-muted-foreground">
+                      {formatTime(msg.created_at)}
+                    </span>
+                    {/* Read receipt for own messages */}
+                    {isOwn && (
+                      <span className="text-muted-foreground">
+                        {msg.read_at ? (
+                          <CheckCheck className="w-3 h-3 text-primary" />
+                        ) : (
+                          <Check className="w-3 h-3" />
+                        )}
+                      </span>
+                    )}
+                  </div>
                 </div>
               );
             })

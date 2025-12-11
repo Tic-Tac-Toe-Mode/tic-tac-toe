@@ -5,7 +5,8 @@ import { useOnlineGame, OnlineGame } from '@/hooks/useOnlineGame';
 import { usePlayerRanking } from '@/hooks/usePlayerRanking';
 import { OnlineRankings } from '@/components/OnlineRankings';
 import GameChat from '@/components/GameChat';
-import { ArrowLeft, Users, Plus, RefreshCw, Wifi, WifiOff, Loader2, RotateCcw, Trophy, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import SpectatorMode from '@/components/SpectatorMode';
+import { ArrowLeft, Users, Plus, RefreshCw, Wifi, WifiOff, Loader2, RotateCcw, Trophy, TrendingUp, TrendingDown, Minus, Eye } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
@@ -67,6 +68,7 @@ export const OnlineMultiplayer = ({ onBack }: OnlineMultiplayerProps) => {
   const [tempName, setTempName] = useState(playerName);
   const [showNameInput, setShowNameInput] = useState(!playerName);
   const [showRankings, setShowRankings] = useState(false);
+  const [showSpectator, setShowSpectator] = useState(false);
   const [eloUpdated, setEloUpdated] = useState(false);
   const prevGameRef = useRef<OnlineGame | null>(null);
   const { playMoveSound, playWinSound, playDrawSound } = useSoundEffects();
@@ -190,6 +192,13 @@ export const OnlineMultiplayer = ({ onBack }: OnlineMultiplayerProps) => {
         myPlayerId={playerId}
         onClose={() => setShowRankings(false)}
       />
+    );
+  }
+
+  // Spectator view
+  if (showSpectator) {
+    return (
+      <SpectatorMode onBack={() => setShowSpectator(false)} />
     );
   }
   if (showNameInput) {
@@ -476,6 +485,15 @@ export const OnlineMultiplayer = ({ onBack }: OnlineMultiplayerProps) => {
               <Plus className="mr-2 h-5 w-5" />
             )}
             Create Game
+          </Button>
+          <Button
+            onClick={() => setShowSpectator(true)}
+            size="lg"
+            variant="outline"
+            className="h-14"
+            title="Watch live games"
+          >
+            <Eye className="h-5 w-5" />
           </Button>
           <Button
             onClick={() => setShowRankings(true)}

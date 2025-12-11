@@ -8,7 +8,8 @@ export interface ChatMessage {
   player_name: string;
   message: string;
   created_at: string;
-  reactions: Record<string, string[]>; // { emoji: [playerId1, playerId2] }
+  reactions: Record<string, string[]>;
+  read_at: string | null;
 }
 
 export const useGameChat = (gameId: string | null, playerId: string, playerName: string) => {
@@ -86,6 +87,27 @@ export const useGameChat = (gameId: string | null, playerId: string, playerName:
     }
   };
 
+  // Mark opponent messages as read
+  const markMessagesAsRead = useCallback(async () => {
+    if (!gameId) return;
+    
+    // Get unread messages from opponent
+    const unreadMessages = messages.filter(
+      msg => msg.player_id !== playerId && !msg.read_at
+    );
+    
+    if (unreadMessages.length === 0) return;
+
+    const { error } = await supabase
+      .from('game_chat_messages')
+      .update({ read_at: new Date().toISOString() })
+      .in('id', unreadMessages.map(m => m.id));
+
+    if (error) {
+      console.error('Error marking messages as read:', error);
+    }
+  }, [gameId, messages, playerId]);
+
   // Broadcast typing status
   const setTyping = useCallback((isTyping: boolean) => {
     if (!presenceChannelRef.current) return;
@@ -118,7 +140,8 @@ export const useGameChat = (gameId: string | null, playerId: string, playerName:
           const newMsg = payload.new as any;
           setMessages(prev => [...prev, {
             ...newMsg,
-            reactions: newMsg.reactions || {}
+            reactions: newMsg.reactions || {},
+            read_at: newMsg.read_at || null
           }]);
         }
       )
@@ -134,7 +157,11 @@ export const useGameChat = (gameId: string | null, playerId: string, playerName:
           const updatedMsg = payload.new as any;
           setMessages(prev => prev.map(msg => 
             msg.id === updatedMsg.id 
-              ? { ...msg, reactions: updatedMsg.reactions || {} }
+              ? { 
+                  ...msg, 
+                  reactions: updatedMsg.reactions || {},
+                  read_at: updatedMsg.read_at || null
+                }
               : msg
           ));
         }
@@ -188,6 +215,7 @@ export const useGameChat = (gameId: string | null, playerId: string, playerName:
     messages,
     sendMessage,
     toggleReaction,
+    markMessagesAsRead,
     isLoading,
     opponentTyping,
     setTyping
