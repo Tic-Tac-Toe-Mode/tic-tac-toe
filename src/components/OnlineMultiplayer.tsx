@@ -3,12 +3,14 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useOnlineGame, OnlineGame } from '@/hooks/useOnlineGame';
 import { usePlayerRanking } from '@/hooks/usePlayerRanking';
+import { useFriends } from '@/hooks/useFriends';
 import { OnlineRankings } from '@/components/OnlineRankings';
 import GameChat from '@/components/GameChat';
 import SpectatorMode from '@/components/SpectatorMode';
 import TournamentMode from '@/components/TournamentMode';
 import { GameReplay } from '@/components/GameReplay';
-import { ArrowLeft, Users, Plus, RefreshCw, Wifi, WifiOff, Loader2, RotateCcw, Trophy, TrendingUp, TrendingDown, Minus, Eye, Swords, Film } from 'lucide-react';
+import { FriendSystem } from '@/components/FriendSystem';
+import { ArrowLeft, Users, Plus, RefreshCw, Wifi, WifiOff, Loader2, RotateCcw, Trophy, TrendingUp, TrendingDown, Minus, Eye, Swords, Film, UserPlus, Bell } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
@@ -73,7 +75,10 @@ export const OnlineMultiplayer = ({ onBack }: OnlineMultiplayerProps) => {
   const [showSpectator, setShowSpectator] = useState(false);
   const [showTournament, setShowTournament] = useState(false);
   const [showReplay, setShowReplay] = useState(false);
+  const [showFriends, setShowFriends] = useState(false);
   const [eloUpdated, setEloUpdated] = useState(false);
+
+  const { challenges, pendingRequests } = useFriends(playerId, playerName);
   const prevGameRef = useRef<OnlineGame | null>(null);
   const { playMoveSound, playWinSound, playDrawSound } = useSoundEffects();
 
@@ -224,6 +229,21 @@ export const OnlineMultiplayer = ({ onBack }: OnlineMultiplayerProps) => {
   // Replay view
   if (showReplay) {
     return <GameReplay onClose={() => setShowReplay(false)} />;
+  }
+
+  // Friends view
+  if (showFriends) {
+    return (
+      <FriendSystem
+        playerId={playerId}
+        playerName={playerName}
+        onBack={() => setShowFriends(false)}
+        onJoinGame={async (gameId) => {
+          await joinGame(gameId);
+          setShowFriends(false);
+        }}
+      />
+    );
   }
   if (showNameInput) {
     return (
@@ -496,11 +516,11 @@ export const OnlineMultiplayer = ({ onBack }: OnlineMultiplayerProps) => {
           <p className="text-muted-foreground text-sm">Create or join a game</p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <Button
             onClick={handleCreateGame}
             size="lg"
-            className="flex-1 h-14 bg-gradient-to-r from-primary to-primary/90"
+            className="col-span-3 h-12 bg-gradient-to-r from-primary to-primary/90"
             disabled={isLoading}
           >
             {isLoading ? (
@@ -511,10 +531,24 @@ export const OnlineMultiplayer = ({ onBack }: OnlineMultiplayerProps) => {
             Create Game
           </Button>
           <Button
+            onClick={() => setShowFriends(true)}
+            size="lg"
+            variant="outline"
+            className="h-12 relative"
+            title="Friends"
+          >
+            <UserPlus className="h-5 w-5" />
+            {(challenges.length + pendingRequests.length) > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center">
+                {challenges.length + pendingRequests.length}
+              </span>
+            )}
+          </Button>
+          <Button
             onClick={() => setShowTournament(true)}
             size="lg"
             variant="outline"
-            className="h-14"
+            className="h-12"
             title="Tournaments"
           >
             <Swords className="h-5 w-5" />
@@ -523,7 +557,7 @@ export const OnlineMultiplayer = ({ onBack }: OnlineMultiplayerProps) => {
             onClick={() => setShowSpectator(true)}
             size="lg"
             variant="outline"
-            className="h-14"
+            className="h-12"
             title="Watch live games"
           >
             <Eye className="h-5 w-5" />
@@ -532,7 +566,7 @@ export const OnlineMultiplayer = ({ onBack }: OnlineMultiplayerProps) => {
             onClick={() => setShowReplay(true)}
             size="lg"
             variant="outline"
-            className="h-14"
+            className="h-12"
             title="Watch replays"
           >
             <Film className="h-5 w-5" />
@@ -541,7 +575,7 @@ export const OnlineMultiplayer = ({ onBack }: OnlineMultiplayerProps) => {
             onClick={() => setShowRankings(true)}
             size="lg"
             variant="outline"
-            className="h-14"
+            className="h-12"
           >
             <Trophy className="h-5 w-5 text-yellow-500" />
           </Button>

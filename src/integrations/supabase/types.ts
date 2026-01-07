@@ -14,6 +14,77 @@ export type Database = {
   }
   public: {
     Tables: {
+      friend_challenges: {
+        Row: {
+          challenged_id: string
+          challenged_name: string
+          challenger_id: string
+          challenger_name: string
+          created_at: string | null
+          expires_at: string | null
+          game_id: string | null
+          id: string
+          status: string
+        }
+        Insert: {
+          challenged_id: string
+          challenged_name: string
+          challenger_id: string
+          challenger_name: string
+          created_at?: string | null
+          expires_at?: string | null
+          game_id?: string | null
+          id?: string
+          status?: string
+        }
+        Update: {
+          challenged_id?: string
+          challenged_name?: string
+          challenger_id?: string
+          challenger_name?: string
+          created_at?: string | null
+          expires_at?: string | null
+          game_id?: string | null
+          id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friend_challenges_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "online_games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      friends: {
+        Row: {
+          created_at: string | null
+          friend_id: string
+          id: string
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          friend_id: string
+          id?: string
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          friend_id?: string
+          id?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       game_chat_messages: {
         Row: {
           created_at: string
