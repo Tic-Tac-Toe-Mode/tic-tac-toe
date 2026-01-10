@@ -7,22 +7,14 @@ interface AdMobRewardItem {
   amount: number;
 }
 
-interface RewardedAdPluginEvents {
-  loaded: () => void;
-  failedToLoad: (error: { code: number; message: string }) => void;
-  showed: () => void;
-  failedToShow: (error: { code: number; message: string }) => void;
-  dismissed: () => void;
-  rewarded: (reward: AdMobRewardItem) => void;
-}
-
-// Test Ad Unit IDs (replace with your real ones in production)
+// Your AdMob App ID: ca-app-pub-6933845365930069~7195590932
+// Ad Unit IDs
 const AD_UNIT_IDS = {
   android: {
-    rewarded: 'ca-app-pub-3940256099942544/5224354917', // Test ID
+    interstitial: 'ca-app-pub-6933845365930069/1017017786',
   },
   ios: {
-    rewarded: 'ca-app-pub-3940256099942544/1712485313', // Test ID
+    interstitial: 'ca-app-pub-6933845365930069/1017017786',
   },
 };
 
@@ -46,7 +38,7 @@ export const useAdMob = () => {
       const { AdMob } = await import('@capacitor-community/admob');
       
       await AdMob.initialize({
-        initializeForTesting: true, // Set to false in production
+        initializeForTesting: false, // Using real ads
       });
       
       setIsInitialized(true);
@@ -60,18 +52,18 @@ export const useAdMob = () => {
   }, [isNative]);
 
   // Get the correct ad unit ID based on platform
-  const getRewardedAdUnitId = useCallback(() => {
+  const getInterstitialAdUnitId = useCallback(() => {
     const platform = Capacitor.getPlatform();
     if (platform === 'android') {
-      return AD_UNIT_IDS.android.rewarded;
+      return AD_UNIT_IDS.android.interstitial;
     } else if (platform === 'ios') {
-      return AD_UNIT_IDS.ios.rewarded;
+      return AD_UNIT_IDS.ios.interstitial;
     }
     return '';
   }, []);
 
-  // Prepare a rewarded ad
-  const prepareRewardedAd = useCallback(async () => {
+  // Prepare an interstitial ad
+  const prepareInterstitialAd = useCallback(async () => {
     if (!isNative || !isInitialized) {
       console.log('AdMob: Cannot prepare ad - not initialized or not native');
       return false;
@@ -81,55 +73,53 @@ export const useAdMob = () => {
     setError(null);
 
     try {
-      const { AdMob, RewardAdPluginEvents } = await import('@capacitor-community/admob');
+      const { AdMob, InterstitialAdPluginEvents } = await import('@capacitor-community/admob');
       
       // Set up event listeners
-      AdMob.addListener(RewardAdPluginEvents.Loaded, () => {
-        console.log('Rewarded ad loaded');
+      AdMob.addListener(InterstitialAdPluginEvents.Loaded, () => {
+        console.log('Interstitial ad loaded');
         setIsAdReady(true);
         setIsLoading(false);
       });
 
-      AdMob.addListener(RewardAdPluginEvents.FailedToLoad, (info: { code: number; message: string }) => {
-        console.error('Rewarded ad failed to load:', info.message);
+      AdMob.addListener(InterstitialAdPluginEvents.FailedToLoad, (info: { code: number; message: string }) => {
+        console.error('Interstitial ad failed to load:', info.message);
         setError('Failed to load ad');
         setIsLoading(false);
         setIsAdReady(false);
       });
 
-      AdMob.addListener(RewardAdPluginEvents.Showed, () => {
-        console.log('Rewarded ad showed');
+      AdMob.addListener(InterstitialAdPluginEvents.Showed, () => {
+        console.log('Interstitial ad showed');
       });
 
-      AdMob.addListener(RewardAdPluginEvents.Dismissed, () => {
-        console.log('Rewarded ad dismissed');
+      AdMob.addListener(InterstitialAdPluginEvents.Dismissed, () => {
+        console.log('Interstitial ad dismissed');
         setIsAdReady(false);
-        // Prepare next ad
-        prepareRewardedAd();
-      });
-
-      AdMob.addListener(RewardAdPluginEvents.Rewarded, (reward: AdMobRewardItem) => {
-        console.log('User earned reward:', reward);
+        // Give reward after watching
+        const reward = { type: 'coins', amount: 10 };
         setLastReward(reward);
+        // Prepare next ad
+        prepareInterstitialAd();
       });
 
-      // Prepare the rewarded ad
-      await AdMob.prepareRewardVideoAd({
-        adId: getRewardedAdUnitId(),
-        isTesting: true, // Set to false in production
+      // Prepare the interstitial ad
+      await AdMob.prepareInterstitial({
+        adId: getInterstitialAdUnitId(),
+        isTesting: false, // Using real ads
       });
 
       return true;
     } catch (err) {
-      console.error('Error preparing rewarded ad:', err);
+      console.error('Error preparing interstitial ad:', err);
       setError('Error preparing ad');
       setIsLoading(false);
       return false;
     }
-  }, [isNative, isInitialized, getRewardedAdUnitId]);
+  }, [isNative, isInitialized, getInterstitialAdUnitId]);
 
-  // Show the rewarded ad
-  const showRewardedAd = useCallback(async (): Promise<AdMobRewardItem | null> => {
+  // Show the interstitial ad
+  const showInterstitialAd = useCallback(async (): Promise<AdMobRewardItem | null> => {
     if (!isNative) {
       // Simulate reward for web testing
       console.log('AdMob: Simulating reward for web');
@@ -147,27 +137,27 @@ export const useAdMob = () => {
     try {
       const { AdMob } = await import('@capacitor-community/admob');
       
-      await AdMob.showRewardVideoAd();
+      await AdMob.showInterstitial();
       
-      // Return the last reward (will be set by the event listener)
-      return lastReward;
+      // Return the reward (will be set by the dismissed event listener)
+      return { type: 'coins', amount: 10 };
     } catch (err) {
-      console.error('Error showing rewarded ad:', err);
+      console.error('Error showing interstitial ad:', err);
       setError('Error showing ad');
       return null;
     }
-  }, [isNative, isAdReady, lastReward]);
+  }, [isNative, isAdReady]);
 
   // Initialize on mount
   useEffect(() => {
     if (isNative && !isInitialized) {
       initialize().then((success) => {
         if (success) {
-          prepareRewardedAd();
+          prepareInterstitialAd();
         }
       });
     }
-  }, [isNative, isInitialized, initialize, prepareRewardedAd]);
+  }, [isNative, isInitialized, initialize, prepareInterstitialAd]);
 
   return {
     isNative,
@@ -177,7 +167,10 @@ export const useAdMob = () => {
     lastReward,
     error,
     initialize,
-    prepareRewardedAd,
-    showRewardedAd,
+    prepareAd: prepareInterstitialAd,
+    showAd: showInterstitialAd,
+    // Aliases for backward compatibility
+    prepareRewardedAd: prepareInterstitialAd,
+    showRewardedAd: showInterstitialAd,
   };
 };
