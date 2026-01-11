@@ -965,42 +965,72 @@ const Index = () => {
         </Card>
 
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <VolumeControl volume={volume} setVolume={setVolume} isMuted={isMuted} setIsMuted={setIsMuted} />
-            <div className="flex gap-1">
-              <Button variant="ghost" size="sm" onClick={() => setShowThemes(true)}>
-                <Palette className="h-4 w-4 mr-1" />
-                Theme
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setShowLeaderboard(true)}>
-                <Crown className="h-4 w-4 mr-1 text-yellow-500" />
-                Top
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setShowStats(true)}>
-                <BarChart3 className="h-4 w-4 mr-1" />
-                Stats
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setShowHistory(true)}>
-                <History className="h-4 w-4 mr-1" />
-                History
-              </Button>
-            </div>
+        {/* Bottom Controls - Well arranged for mobile */}
+        <Card className="p-4 shadow-lg">
+          {/* Quick Actions Grid */}
+          <div className="grid grid-cols-4 gap-2 mb-4">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowThemes(true)}
+              className="flex flex-col items-center gap-1 h-auto py-3 hover:bg-primary/10 hover:border-primary/30"
+            >
+              <Palette className="h-5 w-5 text-primary" />
+              <span className="text-xs font-medium">Theme</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowLeaderboard(true)}
+              className="flex flex-col items-center gap-1 h-auto py-3 hover:bg-yellow-500/10 hover:border-yellow-500/30"
+            >
+              <Crown className="h-5 w-5 text-yellow-500" />
+              <span className="text-xs font-medium">Top</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowStats(true)}
+              className="flex flex-col items-center gap-1 h-auto py-3 hover:bg-accent/10 hover:border-accent/30"
+            >
+              <BarChart3 className="h-5 w-5 text-accent" />
+              <span className="text-xs font-medium">Stats</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowHistory(true)}
+              className="flex flex-col items-center gap-1 h-auto py-3 hover:bg-muted hover:border-muted-foreground/30"
+            >
+              <History className="h-5 w-5 text-muted-foreground" />
+              <span className="text-xs font-medium">History</span>
+            </Button>
           </div>
+
+          {/* Volume Control */}
+          <div className="flex items-center justify-center mb-4 p-2 bg-muted/50 rounded-lg">
+            <VolumeControl volume={volume} setVolume={setVolume} isMuted={isMuted} setIsMuted={setIsMuted} />
+          </div>
+
+          {/* Support Button */}
           <Button
             onClick={() => window.open("https://otieu.com/4/7658671", "_blank")}
             variant="outline"
-            className="w-full"
+            className="w-full mb-3 hover:bg-pink-500/10 hover:border-pink-500/30 hover:text-pink-500"
           >
             Support Us 💝
           </Button>
-          <p className="text-center text-sm text-muted-foreground">
-            {gameMode === "ai" ? `Playing vs AI (${aiDifficulty.charAt(0).toUpperCase() + aiDifficulty.slice(1)})` : "Local 2-player mode"}
-          </p>
-          <p className="text-center text-xs text-muted-foreground">
-            Developer: Alameen Koko
-          </p>
-        </div>
+
+          {/* Game Info */}
+          <div className="text-center space-y-1">
+            <p className="text-sm text-muted-foreground">
+              {gameMode === "ai" ? `Playing vs AI (${aiDifficulty.charAt(0).toUpperCase() + aiDifficulty.slice(1)})` : "Local 2-player mode"}
+            </p>
+            <p className="text-xs text-muted-foreground/70">
+              Developer: Alameen Koko
+            </p>
+          </div>
+        </Card>
       </div>
     </div>
   );
