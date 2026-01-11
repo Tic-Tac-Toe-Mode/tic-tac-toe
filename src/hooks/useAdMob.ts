@@ -1,5 +1,6 @@
 import { useCallback, useState, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { toast } from 'sonner';
 
 // AdMob types
 interface AdMobRewardItem {
@@ -43,10 +44,12 @@ export const useAdMob = () => {
       
       setIsInitialized(true);
       console.log('AdMob initialized successfully');
+      toast.success('🎯 AdMob initialized', { duration: 2000 });
       return true;
     } catch (err) {
       console.error('Failed to initialize AdMob:', err);
       setError('Failed to initialize ads');
+      toast.error('❌ AdMob init failed', { duration: 3000 });
       return false;
     }
   }, [isNative]);
@@ -80,6 +83,7 @@ export const useAdMob = () => {
         console.log('Interstitial ad loaded');
         setIsAdReady(true);
         setIsLoading(false);
+        toast.success('📦 Ad loaded & ready', { duration: 2000 });
       });
 
       AdMob.addListener(InterstitialAdPluginEvents.FailedToLoad, (info: { code: number; message: string }) => {
@@ -87,15 +91,18 @@ export const useAdMob = () => {
         setError('Failed to load ad');
         setIsLoading(false);
         setIsAdReady(false);
+        toast.error(`❌ Ad failed: ${info.message}`, { duration: 4000 });
       });
 
       AdMob.addListener(InterstitialAdPluginEvents.Showed, () => {
         console.log('Interstitial ad showed');
+        toast.info('📺 Ad showing...', { duration: 2000 });
       });
 
       AdMob.addListener(InterstitialAdPluginEvents.Dismissed, () => {
         console.log('Interstitial ad dismissed');
         setIsAdReady(false);
+        toast.success('✅ Ad completed!', { duration: 2000 });
         // Give reward after watching
         const reward = { type: 'coins', amount: 10 };
         setLastReward(reward);
@@ -131,6 +138,7 @@ export const useAdMob = () => {
     if (!isAdReady) {
       console.log('AdMob: Ad not ready');
       setError('Ad not ready yet');
+      toast.warning('⏳ Ad not ready yet', { duration: 2000 });
       return null;
     }
 
