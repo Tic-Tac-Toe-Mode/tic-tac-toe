@@ -1030,6 +1030,30 @@ const Index = () => {
               Developer: Alameen Koko
             </p>
           </div>
+
+          {/* Legal Links */}
+          <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-border/50">
+            <a 
+              href="/privacy" 
+              className="text-xs text-muted-foreground hover:text-primary transition-colors"
+            >
+              Privacy
+            </a>
+            <span className="text-muted-foreground/50">•</span>
+            <a 
+              href="/terms" 
+              className="text-xs text-muted-foreground hover:text-primary transition-colors"
+            >
+              Terms
+            </a>
+            <span className="text-muted-foreground/50">•</span>
+            <a 
+              href="/about" 
+              className="text-xs text-muted-foreground hover:text-primary transition-colors"
+            >
+              About
+            </a>
+          </div>
         </Card>
       </div>
     </div>
