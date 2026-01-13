@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Gamepad2, RotateCcw, User, Users, Trophy, BarChart3, X, Crown, LogOut, History, Palette, Globe, Play } from "lucide-react";
@@ -1033,26 +1034,26 @@ const Index = () => {
 
           {/* Legal Links */}
           <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-border/50">
-            <a 
-              href="/privacy" 
+            <Link
+              to="/privacy"
               className="text-xs text-muted-foreground hover:text-primary transition-colors"
             >
               Privacy
-            </a>
+            </Link>
             <span className="text-muted-foreground/50">•</span>
-            <a 
-              href="/terms" 
+            <Link
+              to="/terms"
               className="text-xs text-muted-foreground hover:text-primary transition-colors"
             >
               Terms
-            </a>
+            </Link>
             <span className="text-muted-foreground/50">•</span>
-            <a 
-              href="/about" 
+            <Link
+              to="/about"
               className="text-xs text-muted-foreground hover:text-primary transition-colors"
             >
               About
-            </a>
+            </Link>
           </div>
         </Card>
       </div>
