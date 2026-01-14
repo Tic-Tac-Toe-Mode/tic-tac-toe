@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Gamepad2, RotateCcw, User, Users, Trophy, BarChart3, X, Crown, LogOut, History, Palette, Globe, Play } from "lucide-react";
+import { Gamepad2, RotateCcw, User, Users, Trophy, BarChart3, X, Crown, LogOut, History, Palette, Globe, Play, Coins } from "lucide-react";
 import { OnlineMultiplayer } from "@/components/OnlineMultiplayer";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
@@ -12,6 +12,10 @@ import { Leaderboard, LeaderboardEntry } from "@/components/Leaderboard";
 import { GameHistory, GameRecord } from "@/components/GameHistory";
 import { ThemeSwitcher, useThemeInit } from "@/components/ThemeSwitcher";
 import { useAdMob } from "@/hooks/useAdMob";
+import { useGameCredits, CREDITS_CONFIG } from "@/hooks/useGameCredits";
+import { GameCreditsDisplay } from "@/components/GameCreditsDisplay";
+import { EarnCoinsModal } from "@/components/EarnCoinsModal";
+import { LockedModeButton } from "@/components/LockedModeButton";
 import logo from "@/assets/logo.jpg";
 import { App } from "@capacitor/app";
 import { Haptics, ImpactStyle, NotificationType } from "@capacitor/haptics";
@@ -98,9 +102,29 @@ const Index = () => {
   const [moveCount, setMoveCount] = useState(0);
   const [showThemes, setShowThemes] = useState(false);
   const [gamesCompletedCount, setGamesCompletedCount] = useState(0);
+  const [showEarnCoins, setShowEarnCoins] = useState(false);
+  const [earnCoinsReason, setEarnCoinsReason] = useState<'ai' | 'online' | 'general'>('general');
   
   // AdMob integration
   const { showAd, prepareAd, isAdReady, isNative } = useAdMob();
+  
+  // Game credits system
+  const {
+    credits,
+    isLoaded: creditsLoaded,
+    isAIUnlocked,
+    isOnlineUnlocked,
+    canPlayAI,
+    canPlayOnline,
+    getAIUnlockProgress,
+    getOnlineUnlockProgress,
+    rewardTwoPlayerGame,
+    rewardAdWatch,
+    rewardSupportClick,
+    payForAIGame,
+    payForOnlineGame,
+    config,
+  } = useGameCredits();
   
   const { volume, setVolume, isMuted, setIsMuted, playMoveSound, playWinSound, playDrawSound } = useSoundEffects();
   
@@ -315,6 +339,9 @@ const Index = () => {
       if (gameMode === "2player") {
         updateLeaderboard(playerNames.X, true);
         updateLeaderboard(playerNames.O, false);
+        // Reward coins for 2 player game
+        const reward = rewardTwoPlayerGame('win');
+        toast.success(`🎮 +${reward} coins earned!`, { duration: 2000 });
       }
     } else if (gameWinner === "O") {
       newStats.oWins += 1;
@@ -323,6 +350,9 @@ const Index = () => {
       if (gameMode === "2player") {
         updateLeaderboard(playerNames.O, true);
         updateLeaderboard(playerNames.X, false);
+        // Reward coins for 2 player game
+        const reward = rewardTwoPlayerGame('win');
+        toast.success(`🎮 +${reward} coins earned!`, { duration: 2000 });
       }
     } else {
       newStats.draws += 1;
@@ -331,6 +361,9 @@ const Index = () => {
       if (gameMode === "2player") {
         updateLeaderboard(playerNames.X, false);
         updateLeaderboard(playerNames.O, false);
+        // Reward coins for 2 player game (draw)
+        const reward = rewardTwoPlayerGame('draw');
+        toast.success(`🎮 +${reward} coins earned!`, { duration: 2000 });
       }
     }
     
@@ -405,9 +438,39 @@ const Index = () => {
       setShowNameInput(true);
       setTempNames({ X: "", O: "" });
     } else if (mode === "ai") {
-      setShowDifficultySelect(true);
+      // Check if AI mode is unlocked and can afford
+      if (!isAIUnlocked()) {
+        setEarnCoinsReason('ai');
+        setShowEarnCoins(true);
+        return;
+      }
+      if (!canPlayAI()) {
+        setEarnCoinsReason('ai');
+        setShowEarnCoins(true);
+        return;
+      }
+      // Deduct coins and start AI mode
+      if (payForAIGame()) {
+        toast.success(`-${config.AI_GAME_COST} coins for AI game 🎮`);
+        setShowDifficultySelect(true);
+      }
     } else if (mode === "online") {
-      setGameMode("online");
+      // Check if Online mode is unlocked and can afford
+      if (!isOnlineUnlocked()) {
+        setEarnCoinsReason('online');
+        setShowEarnCoins(true);
+        return;
+      }
+      if (!canPlayOnline()) {
+        setEarnCoinsReason('online');
+        setShowEarnCoins(true);
+        return;
+      }
+      // Deduct coins and start Online mode
+      if (payForOnlineGame()) {
+        toast.success(`-${config.ONLINE_GAME_COST} coins for Online game 🌐`);
+        setGameMode("online");
+      }
     }
   };
 
@@ -711,7 +774,25 @@ const Index = () => {
             <p className="text-muted-foreground">Choose your game mode</p>
           </div>
 
+            {/* Game Credits Display */}
+            <div className="flex flex-col items-center space-y-2">
+              <GameCreditsDisplay credits={credits} showDetails={false} />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setEarnCoinsReason('general');
+                  setShowEarnCoins(true);
+                }}
+                className="text-xs text-primary hover:text-primary"
+              >
+                <Coins className="h-3 w-3 mr-1" />
+                Earn More Coins
+              </Button>
+            </div>
+
             <div className="space-y-3">
+              {/* 2 Players - Always free */}
               <Button
                 onClick={() => selectMode("2player")}
                 size="lg"
@@ -719,27 +800,38 @@ const Index = () => {
               >
                 <Users className="mr-2 h-5 w-5" />
                 2 Players
+                <span className="ml-2 text-xs bg-white/20 px-2 py-0.5 rounded-full">FREE</span>
               </Button>
               
-              <Button
+              {/* vs AI - Locked until threshold */}
+              <LockedModeButton
+                mode="ai"
+                isUnlocked={isAIUnlocked()}
+                canAfford={canPlayAI()}
+                currentCoins={credits.coins}
+                unlockProgress={credits.totalEarned}
+                unlockThreshold={config.AI_UNLOCK_THRESHOLD}
                 onClick={() => selectMode("ai")}
-                size="lg"
-                variant="outline"
-                className="w-full h-16 text-lg border-2 hover:border-accent hover:bg-accent/10"
-              >
-                <User className="mr-2 h-5 w-5" />
-                vs AI
-              </Button>
+                onEarnCoins={() => {
+                  setEarnCoinsReason('ai');
+                  setShowEarnCoins(true);
+                }}
+              />
 
-              <Button
+              {/* Online Multiplayer - Locked until threshold */}
+              <LockedModeButton
+                mode="online"
+                isUnlocked={isOnlineUnlocked()}
+                canAfford={canPlayOnline()}
+                currentCoins={credits.coins}
+                unlockProgress={credits.totalEarned}
+                unlockThreshold={config.ONLINE_UNLOCK_THRESHOLD}
                 onClick={() => selectMode("online")}
-                size="lg"
-                variant="outline"
-                className="w-full h-16 text-lg border-2 border-green-500/30 hover:border-green-500 hover:bg-green-500/10"
-              >
-                <Globe className="mr-2 h-5 w-5 text-green-500" />
-                Online Multiplayer
-              </Button>
+                onEarnCoins={() => {
+                  setEarnCoinsReason('online');
+                  setShowEarnCoins(true);
+                }}
+              />
             </div>
 
             <div className="pt-4 border-t">
@@ -820,6 +912,24 @@ const Index = () => {
               </p>
             </div>
         </Card>
+
+        {/* Earn Coins Modal */}
+        <EarnCoinsModal
+          isOpen={showEarnCoins}
+          onClose={() => setShowEarnCoins(false)}
+          onAdReward={rewardAdWatch}
+          onSupportClick={rewardSupportClick}
+          onPlay2Players={() => selectMode("2player")}
+          currentCoins={credits.coins}
+          neededCoins={
+            earnCoinsReason === 'ai' 
+              ? (isAIUnlocked() ? config.AI_GAME_COST : config.AI_UNLOCK_THRESHOLD)
+              : earnCoinsReason === 'online'
+              ? (isOnlineUnlocked() ? config.ONLINE_GAME_COST : config.ONLINE_UNLOCK_THRESHOLD)
+              : 0
+          }
+          reason={earnCoinsReason}
+        />
 
         <AlertDialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
           <AlertDialogContent>
