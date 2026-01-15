@@ -10,36 +10,45 @@ interface AdMobRewardItem {
 
 // AdMob Configuration
 // App ID: ca-app-pub-6933845365930069~7195590932
-// Ad Unit IDs for Interstitial Ads
+// Ad Unit IDs
 const AD_UNIT_IDS = {
   android: {
     interstitial: 'ca-app-pub-6933845365930069/1017017786',
+    // Add your rewarded ad unit ID here after creating it in AdMob
+    rewarded: 'ca-app-pub-6933845365930069/1017017786', // Replace with actual rewarded ad unit ID
   },
   ios: {
     interstitial: 'ca-app-pub-6933845365930069/1017017786',
+    rewarded: 'ca-app-pub-6933845365930069/1017017786', // Replace with actual rewarded ad unit ID
   },
 };
 
-// Reward amount for watching ads
-const AD_REWARD_AMOUNT = 10;
+// Reward amounts
+export const AD_REWARD_AMOUNTS = {
+  INTERSTITIAL: 10,
+  REWARDED_VIDEO: 20, // 2x coins for rewarded video
+};
 
 export const useAdMob = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAdReady, setIsAdReady] = useState(false);
+  const [isRewardedAdReady, setIsRewardedAdReady] = useState(false);
   const [lastReward, setLastReward] = useState<AdMobRewardItem | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  // Promise resolver for ad completion
+  // Promise resolvers for ad completion
   const adCompletionResolver = useRef<((value: AdMobRewardItem | null) => void) | null>(null);
+  const rewardedAdCompletionResolver = useRef<((value: AdMobRewardItem | null) => void) | null>(null);
   const adWasShown = useRef(false);
+  const rewardedAdWasShown = useRef(false);
 
   const isNative = Capacitor.isNativePlatform();
 
   // Initialize AdMob
   const initialize = useCallback(async () => {
     if (!isNative) {
-      console.log('AdMob: Not running on native platform');
+      console.log('AdMob: Not running on native platform - NO REWARDS ON WEB');
       return false;
     }
 
@@ -47,7 +56,7 @@ export const useAdMob = () => {
       const { AdMob } = await import('@capacitor-community/admob');
       
       await AdMob.initialize({
-        initializeForTesting: false, // Using real ads with your App ID
+        initializeForTesting: false,
       });
       
       setIsInitialized(true);
@@ -67,6 +76,16 @@ export const useAdMob = () => {
       return AD_UNIT_IDS.android.interstitial;
     } else if (platform === 'ios') {
       return AD_UNIT_IDS.ios.interstitial;
+    }
+    return '';
+  }, []);
+
+  const getRewardedAdUnitId = useCallback(() => {
+    const platform = Capacitor.getPlatform();
+    if (platform === 'android') {
+      return AD_UNIT_IDS.android.rewarded;
+    } else if (platform === 'ios') {
+      return AD_UNIT_IDS.ios.rewarded;
     }
     return '';
   }, []);
@@ -102,7 +121,6 @@ export const useAdMob = () => {
         setIsLoading(false);
         setIsAdReady(false);
         
-        // Resolve promise with null (no reward)
         if (adCompletionResolver.current) {
           adCompletionResolver.current(null);
           adCompletionResolver.current = null;
@@ -118,23 +136,23 @@ export const useAdMob = () => {
         console.log('Interstitial ad dismissed - user completed watching');
         setIsAdReady(false);
         
-        // Only give reward if ad was actually shown
         if (adWasShown.current) {
-          const reward: AdMobRewardItem = { type: 'coins', amount: AD_REWARD_AMOUNT };
+          const reward: AdMobRewardItem = { type: 'coins', amount: AD_REWARD_AMOUNTS.INTERSTITIAL };
           setLastReward(reward);
           
-          // Resolve the promise with the reward
           if (adCompletionResolver.current) {
             adCompletionResolver.current(reward);
             adCompletionResolver.current = null;
           }
-          
-          toast.success(`✅ Ad completed! +${AD_REWARD_AMOUNT} coins earned!`, { duration: 3000 });
+        } else {
+          if (adCompletionResolver.current) {
+            adCompletionResolver.current(null);
+            adCompletionResolver.current = null;
+          }
         }
         
         adWasShown.current = false;
         
-        // Prepare the next ad
         setTimeout(() => {
           prepareInterstitialAd();
         }, 1000);
@@ -146,17 +164,15 @@ export const useAdMob = () => {
         setIsAdReady(false);
         adWasShown.current = false;
         
-        // Resolve promise with null (no reward)
         if (adCompletionResolver.current) {
           adCompletionResolver.current(null);
           adCompletionResolver.current = null;
         }
       });
 
-      // Prepare the interstitial ad
       await AdMob.prepareInterstitial({
         adId: getInterstitialAdUnitId(),
-        isTesting: false, // Real ads
+        isTesting: false,
       });
 
       console.log('Interstitial ad preparation started');
@@ -169,28 +185,104 @@ export const useAdMob = () => {
     }
   }, [isNative, isInitialized, isLoading, isAdReady, getInterstitialAdUnitId]);
 
-  // Show the interstitial ad and wait for completion
-  const showInterstitialAd = useCallback(async (): Promise<AdMobRewardItem | null> => {
-    // For web testing - simulate a short delay then give reward
-    if (!isNative) {
-      console.log('AdMob: Web mode - simulating ad watch');
-      toast.info('📺 Simulating ad (web mode)...', { duration: 2000 });
-      
-      // Simulate watching an ad
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const simulatedReward: AdMobRewardItem = { type: 'coins', amount: AD_REWARD_AMOUNT };
-      setLastReward(simulatedReward);
-      return simulatedReward;
+  // Prepare a rewarded video ad
+  const prepareRewardedVideoAd = useCallback(async () => {
+    if (!isNative || !isInitialized) {
+      console.log('AdMob: Cannot prepare rewarded ad - not initialized or not native');
+      return false;
     }
 
-    // Native platform
+    if (isRewardedAdReady) {
+      console.log('AdMob: Rewarded ad already ready');
+      return true;
+    }
+
+    try {
+      const { AdMob, RewardAdPluginEvents } = await import('@capacitor-community/admob');
+      
+      AdMob.addListener(RewardAdPluginEvents.Loaded, () => {
+        console.log('Rewarded ad loaded successfully');
+        setIsRewardedAdReady(true);
+      });
+
+      AdMob.addListener(RewardAdPluginEvents.FailedToLoad, (info: { code: number; message: string }) => {
+        console.error('Rewarded ad failed to load:', info.message);
+        setIsRewardedAdReady(false);
+        
+        if (rewardedAdCompletionResolver.current) {
+          rewardedAdCompletionResolver.current(null);
+          rewardedAdCompletionResolver.current = null;
+        }
+      });
+
+      AdMob.addListener(RewardAdPluginEvents.Showed, () => {
+        console.log('Rewarded ad is now showing');
+        rewardedAdWasShown.current = true;
+      });
+
+      AdMob.addListener(RewardAdPluginEvents.Rewarded, (reward: { type: string; amount: number }) => {
+        console.log('User earned reward:', reward);
+        // User watched the full video - give 2x reward
+        const doubleReward: AdMobRewardItem = { 
+          type: 'coins', 
+          amount: AD_REWARD_AMOUNTS.REWARDED_VIDEO 
+        };
+        setLastReward(doubleReward);
+        
+        if (rewardedAdCompletionResolver.current) {
+          rewardedAdCompletionResolver.current(doubleReward);
+          rewardedAdCompletionResolver.current = null;
+        }
+      });
+
+      AdMob.addListener(RewardAdPluginEvents.Dismissed, () => {
+        console.log('Rewarded ad dismissed');
+        setIsRewardedAdReady(false);
+        rewardedAdWasShown.current = false;
+        
+        // Prepare next rewarded ad
+        setTimeout(() => {
+          prepareRewardedVideoAd();
+        }, 1000);
+      });
+
+      AdMob.addListener(RewardAdPluginEvents.FailedToShow, (info: { code: number; message: string }) => {
+        console.error('Rewarded ad failed to show:', info.message);
+        setIsRewardedAdReady(false);
+        rewardedAdWasShown.current = false;
+        
+        if (rewardedAdCompletionResolver.current) {
+          rewardedAdCompletionResolver.current(null);
+          rewardedAdCompletionResolver.current = null;
+        }
+      });
+
+      await AdMob.prepareRewardVideoAd({
+        adId: getRewardedAdUnitId(),
+        isTesting: false,
+      });
+
+      console.log('Rewarded ad preparation started');
+      return true;
+    } catch (err) {
+      console.error('Error preparing rewarded ad:', err);
+      return false;
+    }
+  }, [isNative, isInitialized, isRewardedAdReady, getRewardedAdUnitId]);
+
+  // Show the interstitial ad and wait for completion
+  const showInterstitialAd = useCallback(async (): Promise<AdMobRewardItem | null> => {
+    // NO REWARDS ON WEB - Must watch real ads on native
+    if (!isNative) {
+      console.log('AdMob: Web mode - NO REWARDS (must use native app)');
+      toast.error('📱 Ads only work on mobile app. Download the app to earn coins!', { duration: 3000 });
+      return null;
+    }
+
     if (!isAdReady) {
       console.log('AdMob: Ad not ready');
       setError('Ad not ready yet. Please wait...');
       toast.warning('⏳ Ad is loading, please wait...', { duration: 2000 });
-      
-      // Try to prepare an ad
       prepareInterstitialAd();
       return null;
     }
@@ -198,11 +290,10 @@ export const useAdMob = () => {
     try {
       const { AdMob } = await import('@capacitor-community/admob');
       
-      // Create a promise that will resolve when the ad is dismissed
       const rewardPromise = new Promise<AdMobRewardItem | null>((resolve) => {
         adCompletionResolver.current = resolve;
         
-        // Timeout after 2 minutes (in case something goes wrong)
+        // Timeout after 2 minutes
         setTimeout(() => {
           if (adCompletionResolver.current) {
             console.log('AdMob: Ad completion timeout');
@@ -212,11 +303,13 @@ export const useAdMob = () => {
         }, 120000);
       });
       
-      // Show the ad
       await AdMob.showInterstitial();
-      
-      // Wait for the ad to be dismissed and return the reward
       const reward = await rewardPromise;
+      
+      if (reward) {
+        toast.success(`✅ Ad completed! +${reward.amount} coins earned!`, { duration: 3000 });
+      }
+      
       return reward;
     } catch (err) {
       console.error('Error showing interstitial ad:', err);
@@ -226,31 +319,86 @@ export const useAdMob = () => {
     }
   }, [isNative, isAdReady, prepareInterstitialAd]);
 
+  // Show rewarded video ad for 2x coins
+  const showRewardedVideoAd = useCallback(async (): Promise<AdMobRewardItem | null> => {
+    // NO REWARDS ON WEB - Must watch real ads on native
+    if (!isNative) {
+      console.log('AdMob: Web mode - NO REWARDS (must use native app)');
+      toast.error('📱 Ads only work on mobile app. Download the app to earn coins!', { duration: 3000 });
+      return null;
+    }
+
+    if (!isRewardedAdReady) {
+      console.log('AdMob: Rewarded ad not ready');
+      setError('Video ad not ready yet. Please wait...');
+      toast.warning('⏳ Video ad is loading, please wait...', { duration: 2000 });
+      prepareRewardedVideoAd();
+      return null;
+    }
+
+    try {
+      const { AdMob } = await import('@capacitor-community/admob');
+      
+      const rewardPromise = new Promise<AdMobRewardItem | null>((resolve) => {
+        rewardedAdCompletionResolver.current = resolve;
+        
+        // Timeout after 2 minutes
+        setTimeout(() => {
+          if (rewardedAdCompletionResolver.current) {
+            console.log('AdMob: Rewarded ad completion timeout');
+            rewardedAdCompletionResolver.current(null);
+            rewardedAdCompletionResolver.current = null;
+          }
+        }, 120000);
+      });
+      
+      await AdMob.showRewardVideoAd();
+      const reward = await rewardPromise;
+      
+      if (reward) {
+        toast.success(`🎬 Video complete! +${reward.amount} coins earned (2x bonus)!`, { duration: 3000 });
+      }
+      
+      return reward;
+    } catch (err) {
+      console.error('Error showing rewarded ad:', err);
+      setError('Error showing video ad');
+      rewardedAdCompletionResolver.current = null;
+      return null;
+    }
+  }, [isNative, isRewardedAdReady, prepareRewardedVideoAd]);
+
   // Initialize on mount
   useEffect(() => {
     if (isNative && !isInitialized) {
       initialize().then((success) => {
         if (success) {
           prepareInterstitialAd();
+          prepareRewardedVideoAd();
         }
       });
     }
-  }, [isNative, isInitialized, initialize, prepareInterstitialAd]);
+  }, [isNative, isInitialized, initialize, prepareInterstitialAd, prepareRewardedVideoAd]);
 
   return {
     isNative,
     isInitialized,
     isLoading,
     isAdReady,
+    isRewardedAdReady,
     lastReward,
     error,
     initialize,
+    // Interstitial ads
     prepareAd: prepareInterstitialAd,
     showAd: showInterstitialAd,
+    // Rewarded video ads (2x coins)
+    prepareRewardedVideoAd,
+    showRewardedVideoAd,
     // Aliases for backward compatibility
     prepareRewardedAd: prepareInterstitialAd,
     showRewardedAd: showInterstitialAd,
-    // Constants
-    adRewardAmount: AD_REWARD_AMOUNT,
+    // Reward amounts
+    rewardAmounts: AD_REWARD_AMOUNTS,
   };
 };

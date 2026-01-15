@@ -19,7 +19,8 @@ export const CREDITS_CONFIG = {
   TWO_PLAYER_WIN_REWARD: 5,
   TWO_PLAYER_DRAW_REWARD: 3,
   TWO_PLAYER_LOSS_REWARD: 2,
-  AD_WATCH_REWARD: 10,
+  AD_WATCH_REWARD: 10, // Regular ad
+  AD_VIDEO_REWARD: 20, // Rewarded video (2x)
   SUPPORT_US_REWARD: 15,
   
   // Unlock thresholds (first time only, then use coins)
@@ -66,7 +67,7 @@ export const useGameCredits = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   }, []);
 
-  // Add coins
+  // Add coins with specific amount
   const addCoins = useCallback((amount: number, source: 'twoplayer' | 'ad' | 'support') => {
     setCredits(prev => {
       const updated: GameCredits = {
@@ -100,7 +101,7 @@ export const useGameCredits = () => {
     return credits.coins >= amount;
   }, [credits.coins]);
 
-  // Check if AI mode is unlocked (either has enough total earned OR has coins to spend)
+  // Check if AI mode is unlocked
   const isAIUnlocked = useCallback((): boolean => {
     return credits.totalEarned >= CREDITS_CONFIG.AI_UNLOCK_THRESHOLD;
   }, [credits.totalEarned]);
@@ -140,10 +141,10 @@ export const useGameCredits = () => {
     return reward;
   }, [addCoins]);
 
-  // Reward for watching ad
-  const rewardAdWatch = useCallback(() => {
-    addCoins(CREDITS_CONFIG.AD_WATCH_REWARD, 'ad');
-    return CREDITS_CONFIG.AD_WATCH_REWARD;
+  // Reward for watching ad (with custom amount for regular vs rewarded video)
+  const rewardAdWatch = useCallback((amount: number = CREDITS_CONFIG.AD_WATCH_REWARD) => {
+    addCoins(amount, 'ad');
+    return amount;
   }, [addCoins]);
 
   // Reward for support click

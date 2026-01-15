@@ -109,6 +109,7 @@ const Index = () => {
   const { showAd, prepareAd, isAdReady, isNative } = useAdMob();
   
   // Game credits system
+  const gameCredits = useGameCredits();
   const {
     credits,
     isLoaded: creditsLoaded,
@@ -124,7 +125,7 @@ const Index = () => {
     payForAIGame,
     payForOnlineGame,
     config,
-  } = useGameCredits();
+  } = gameCredits;
   
   const { volume, setVolume, isMuted, setIsMuted, playMoveSound, playWinSound, playDrawSound } = useSoundEffects();
   
@@ -917,7 +918,10 @@ const Index = () => {
         <EarnCoinsModal
           isOpen={showEarnCoins}
           onClose={() => setShowEarnCoins(false)}
-          onAdReward={rewardAdWatch}
+          onAdReward={(amount) => {
+            rewardAdWatch(amount);
+            toast.success(`🎬 +${amount} coins earned from ad!`, { duration: 2000 });
+          }}
           onSupportClick={rewardSupportClick}
           onPlay2Players={() => selectMode("2player")}
           currentCoins={credits.coins}
