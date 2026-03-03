@@ -5,9 +5,8 @@ const config: CapacitorConfig = {
   appName: 'canvas-game-crafter',
   webDir: 'dist',
   server: {
-    // Uncomment for live reload during development:
-    // url: 'https://932b4d85-2967-4f4b-86cb-eb63fe170e98.lovableproject.com?forceHideBadge=true',
-    // cleartext: true
+    url: 'https://932b4d85-2967-4f4b-86cb-eb63fe170e98.lovableproject.com?forceHideBadge=true',
+    cleartext: true
   },
   android: {
     allowMixedContent: true,
