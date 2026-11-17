@@ -25,7 +25,7 @@ const GameChat: React.FC<GameChatProps> = ({ gameId, playerId, playerName }) => 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showEmojis, setShowEmojis] = useState(false);
-  const typingDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const typingDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevMessageCountRef = useRef(0);
 
   // Toggle chat mute

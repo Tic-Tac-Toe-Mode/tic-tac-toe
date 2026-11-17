@@ -1,0 +1,5 @@
+- [x] Align native advertising dependencies and disable release live reload.
+- [x] Generate Android project and configure AdMob manifest.
+- [x] Verify available diagnostics and document remaining device/release requirements.
+- [ ] Verify APK on device: requires local Android SDK/JDK and device.
+- [ ] Verify rewarded ads: requires a genuine rewarded ad unit ID.
