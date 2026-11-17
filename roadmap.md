@@ -3,3 +3,5 @@
 - [x] Verify available diagnostics and document remaining device/release requirements.
 - [ ] Verify APK on device: requires local Android SDK/JDK and device.
 - [ ] Verify rewarded ads: requires a genuine rewarded ad unit ID.
+- [x] Save Lagos daily dates automatically and add a public daily visitor count.
+- [x] Verify counting, repeat visits, and phone/desktop placement.

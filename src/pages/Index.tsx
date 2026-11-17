@@ -14,6 +14,7 @@ import { ThemeSwitcher, useThemeInit } from "@/components/ThemeSwitcher";
 import { useAdMob } from "@/hooks/useAdMob";
 import { useGameCredits, CREDITS_CONFIG } from "@/hooks/useGameCredits";
 import { GameCreditsDisplay } from "@/components/GameCreditsDisplay";
+import { DailyVisitors } from "@/components/DailyVisitors";
 import { EarnCoinsModal } from "@/components/EarnCoinsModal";
 import { LockedModeButton } from "@/components/LockedModeButton";
 import logo from "@/assets/logo.jpg";
@@ -911,6 +912,7 @@ const Index = () => {
               <p className="text-xs text-center text-muted-foreground">
                 Developer: Alameen Koko
               </p>
+              <DailyVisitors />
             </div>
         </Card>
 
@@ -1147,6 +1149,7 @@ const Index = () => {
           </div>
 
           {/* Legal Links */}
+          <DailyVisitors />
           <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-border/50">
             <Link
               to="/privacy"

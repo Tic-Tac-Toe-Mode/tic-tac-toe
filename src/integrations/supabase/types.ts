@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      daily_visitor_keys: {
+        Row: {
+          visit_date: string
+          visitor_hash: string
+        }
+        Insert: {
+          visit_date: string
+          visitor_hash: string
+        }
+        Update: {
+          visit_date?: string
+          visitor_hash?: string
+        }
+        Relationships: []
+      }
+      daily_visitor_totals: {
+        Row: {
+          updated_at: string
+          visit_date: string
+          visitor_count: number
+        }
+        Insert: {
+          updated_at?: string
+          visit_date: string
+          visitor_count?: number
+        }
+        Update: {
+          updated_at?: string
+          visit_date?: string
+          visitor_count?: number
+        }
+        Relationships: []
+      }
       friend_challenges: {
         Row: {
           challenged_id: string
@@ -400,7 +433,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      ensure_daily_visitor_date: { Args: never; Returns: undefined }
+      record_daily_visit: {
+        Args: { visitor_key: string }
+        Returns: {
+          visit_date: string
+          visitor_count: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
