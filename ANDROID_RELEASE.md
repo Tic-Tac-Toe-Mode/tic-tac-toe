@@ -4,7 +4,7 @@ The Android project is included in `android/`. The application identifier was co
 
 ## Build locally
 
-1. Download the latest repository code. Install Node 22, Android Studio, JDK 21, and Android SDK 35.
+1. Download the latest repository code. Install Node 22, Android Studio, JDK 21, and Android SDK 36.
 2. Run `npm ci`.
 3. Run `npm run build` then `npx cap sync android` after every code update.
 4. Run `npx cap open android` and select JDK 21 for Gradle.
@@ -19,7 +19,7 @@ The AdMob application ID is configured inside the Android manifest, not merely i
 - Review ad consent requirements and privacy options for the regions you serve before requesting ads.
 - The privacy pages contain an unverified support address and data/security claims. Replace them with your actual contact and retention practices, publish a reachable privacy URL, and complete accurate Data Safety and Contains Ads declarations.
 - Public multiplayer/chat permissions, moderation/reporting/blocking and deletion handling need a security/compliance review before public release.
-- Check current Play target API requirements at submission time; the generated project targets API 35 and may need an upgrade for your submission date.
+- Check current Play target API requirements at submission time; the generated project targets API 36; raise versionCode in android/app/build.gradle for every new upload.
 - Android compilation and physical-device ads cannot be verified in this sandbox because it has no Android SDK or Java runtime.
 
 Read the native mobile guide: https://docs.lovable.dev/tips-tricks/mobile-development
