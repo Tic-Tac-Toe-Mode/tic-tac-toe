@@ -441,6 +441,13 @@ export type Database = {
           visitor_count: number
         }[]
       }
+      record_visit_stats: {
+        Args: { visitor_key: string }
+        Returns: {
+          all_time_count: number
+          today_count: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

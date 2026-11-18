@@ -15,6 +15,13 @@
       "when": 1794942448360,
       "tag": "0001_enable_daily_scheduling",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795006486047,
+      "tag": "0002_global_visitor_stats",
+      "breakpoints": true
     }
   ]
 }

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Users } from 'lucide-react';
+import { Users, Globe } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 export function DailyVisitors() {
-  const [total, setTotal] = useState<number | null>(null);
+  const [stats, setStats] = useState<{ today: number; allTime: number } | null>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
@@ -15,10 +15,10 @@ export function DailyVisitors() {
           key = crypto.randomUUID();
           localStorage.setItem('daily-visitor-key', key);
         }
-        const { data, error } = await supabase.rpc('record_daily_visit', { visitor_key: key });
+        const { data, error } = await supabase.rpc('record_visit_stats', { visitor_key: key });
         if (error) throw error;
         if (active && data?.[0]) {
-          setTotal(Number(data[0].visitor_count));
+          setStats({ today: Number(data[0].today_count), allTime: Number(data[0].all_time_count) });
           setFailed(false);
         }
       } catch {
@@ -32,16 +32,24 @@ export function DailyVisitors() {
     return () => { active = false; window.removeEventListener('focus', onFocus); };
   }, []);
 
+  const show = (n?: number) => (stats ? n!.toLocaleString() : failed ? '—' : '…');
+
   return (
-    <div className="flex items-center justify-center gap-3 border-t border-border py-3 text-foreground" aria-label="Daily visitors">
-      <Users className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
-      <div className="min-w-0">
-        <p className="text-xs text-muted-foreground">Visitors today</p>
-        <p className="text-xs text-muted-foreground">Lagos · UTC+1</p>
+    <div className="grid grid-cols-2 divide-x divide-border border-t border-border py-3 text-foreground" aria-label="Visitors">
+      <div className="flex items-center justify-center gap-2 px-2">
+        <Users className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+        <div className="min-w-0 text-left">
+          <p className="text-xs text-muted-foreground">Today</p>
+          <p className="text-lg font-semibold tabular-nums leading-tight" aria-live="polite">{show(stats?.today)}</p>
+        </div>
       </div>
-      <span className="min-w-8 text-right text-xl font-semibold tabular-nums" aria-live="polite">
-        {total !== null ? total.toLocaleString() : failed ? 'Unavailable' : '…'}
-      </span>
+      <div className="flex items-center justify-center gap-2 px-2">
+        <Globe className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+        <div className="min-w-0 text-left">
+          <p className="text-xs text-muted-foreground">All time</p>
+          <p className="text-lg font-semibold tabular-nums leading-tight">{show(stats?.allTime)}</p>
+        </div>
+      </div>
     </div>
   );
 }
